@@ -13,7 +13,7 @@ import Data.Typelevel.Num (D1)
 import Effect (Effect)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), CanvasInfo(..), defaultExporter, gain', runInBrowser_, sinOsc, speaker')
+import FRP.Behavior.Audio (AV(..), CanvasInfo(..), defaultExporter, runInBrowser_, speaker')
 import FRP.Event (Event, makeEvent, subscribe)
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
@@ -28,6 +28,18 @@ import Web.TouchEvent.TouchEvent (TouchEvent, changedTouches, fromEvent)
 import Web.TouchEvent.TouchList as TL
 import Web.UIEvent.MouseEvent (MouseEvent)
 import Web.UIEvent.MouseEvent as ME
+
+boundByQueue_ :: forall acc a. Monoid a => Marker -> Marker -> (acc -> Marker -> Number -> a) -> acc -> Marker -> Number -> a
+boundByQueue_ st ed f ac m n = if m >= st && m <= ed then f ac m n else mempty
+
+boundByQueue :: forall a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> Marker -> Number -> a
+boundByQueue st ed f m n = boundByQueue_ st ed (pure f) unit m n
+
+boundByQueue' :: forall a. Monoid a => Marker -> Marker -> (Number -> a) -> Marker -> Number -> a
+boundByQueue' st ed f m n = boundByQueue_ st ed ((pure <<< pure) f) unit m n
+
+boundByQueue'' :: forall a. Monoid a => Marker -> Marker -> a -> Marker -> Number -> a
+boundByQueue'' st ed f m n = boundByQueue_ st ed ((pure <<< pure <<< pure) f) unit m n
 
 data Marker
   = There0
@@ -542,7 +554,8 @@ data Screen
   | IsJustToLove
   | AndBeLovedInReturn
 
-derive instance eqMarker :: Eq Marker
+instance eqMarker :: Eq Marker where
+  eq a b = eq (m2n a) (m2n b)
 
 instance ordMarker :: Ord Marker where
   compare x y = compare (m2n x) (m2n y)
@@ -778,7 +791,7 @@ scene inter acc' ci'@(CanvasInfo ci) _ = f <$> (interactionLog inter)
   where
   f p =
     AV
-      (Just (speaker' (gain' 0.03 (sinOsc 440.0))))
+      (Just (speaker' zero))
       (Just (snd cvs))
       (fst cvs)
     where
