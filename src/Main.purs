@@ -5,20 +5,27 @@ import Color (Color, rgb)
 import Data.Array (catMaybes, head, length, mapWithIndex, range)
 import Data.Foldable (fold, foldl, traverse_)
 import Data.Int (toNumber)
+import Data.List (List(..), (:))
+import Data.List as L
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.Newtype (wrap)
+import Data.NonEmpty (NonEmpty, (:|))
+import Data.Profunctor (lcmap)
 import Data.String (Pattern(..), indexOf)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Typelevel.Num (D1)
+import Data.Typelevel.Num (D1, D2)
+import Data.Vec ((+>), empty)
 import Effect (Effect)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), CanvasInfo(..), defaultExporter, runInBrowser_, speaker')
+import FRP.Behavior.Audio (AV(..), AudioParameter, AudioUnit, CanvasInfo(..), audioWorkletProcessor_, defaultExporter, evalPiecewise, gain_, gain_', makePeriodicWave, microphone, pannerMono_, periodicOsc_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
+import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
 import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
-import Type.Klank.Dev (Klank', klank)
+import Math (pow, (%))
+import Type.Klank.Dev (Klank', defaultEngineInfo, klank)
 import Web.Event.EventTarget (addEventListener, eventListener, removeEventListener)
 import Web.HTML (window)
 import Web.HTML.Navigator (userAgent)
@@ -29,17 +36,235 @@ import Web.TouchEvent.TouchList as TL
 import Web.UIEvent.MouseEvent (MouseEvent)
 import Web.UIEvent.MouseEvent as ME
 
-boundByQueue_ :: forall acc a. Monoid a => Marker -> Marker -> (acc -> Marker -> Number -> a) -> acc -> Marker -> Number -> a
-boundByQueue_ st ed f ac m n = if m >= st && m <= ed then f ac m n else mempty
+boundByQueue_ :: forall acc a. Monoid a => Marker -> Marker -> (acc -> Marker -> Number -> Tuple acc a) -> acc -> Marker -> Number -> Tuple acc a
+boundByQueue_ st ed f ac m n = if m >= st && m <= ed then f ac m n else Tuple ac mempty
 
-boundByQueue :: forall a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> Marker -> Number -> a
-boundByQueue st ed f m n = boundByQueue_ st ed (pure f) unit m n
+boundByQueue :: forall acc a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> acc -> Marker -> Number -> Tuple acc a
+boundByQueue st ed f = boundByQueue_ st ed (\a m n -> Tuple a $ f m n)
 
-boundByQueue' :: forall a. Monoid a => Marker -> Marker -> (Number -> a) -> Marker -> Number -> a
-boundByQueue' st ed f m n = boundByQueue_ st ed ((pure <<< pure) f) unit m n
+boundByQueue' :: forall acc a. Monoid a => Marker -> Marker -> (Number -> a) -> acc -> Marker -> Number -> Tuple acc a
+boundByQueue' st ed f = boundByQueue_ st ed (\a m n -> Tuple a $ f n)
 
-boundByQueue'' :: forall a. Monoid a => Marker -> Marker -> a -> Marker -> Number -> a
-boundByQueue'' st ed f m n = boundByQueue_ st ed ((pure <<< pure <<< pure) f) unit m n
+boundByQueue'' :: forall acc a. Monoid a => Marker -> Marker -> a -> acc -> Marker -> Number -> Tuple acc a
+boundByQueue'' st ed f = boundByQueue_ st ed (\a m n -> Tuple a f)
+
+conv440 :: Number -> Number
+conv440 i = 440.0 * (2.0 `pow` ((i - 69.0) / 12.0))
+
+atT :: forall a. Number -> (Number -> a) -> (Number -> a)
+atT t = lcmap (_ - t)
+
+loopT :: forall a. Number -> (Number -> a) -> (Number -> a)
+loopT t = lcmap (_ % t)
+
+boundPlayer :: forall a. Number -> (Number -> List a) -> Number -> List a
+boundPlayer len a time = if (time) + kr >= 0.0 && time < (len) then a time else Nil
+
+kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
+
+mic = microphone :: AudioUnit D1
+
+pmic = pannerMono_ "voicePanner" 0.0 mic :: AudioUnit D2
+
+t1c440 :: Number -> Tuple Number Number
+t1c440 = Tuple 1.0 <<< conv440
+
+comp :: Marker -> List (Tuple Number Number)
+comp There0 = Nil
+
+comp Was0 = t1c440 <$> 60.0 : 63.0 : 64.0 : 68.0 : Nil
+
+comp A0 = t1c440 <$> 56.0 : 59.0 : 61.0 : 64.0 : Nil
+
+comp Boy0 = t1c440 <$> 54.0 : 56.0 : 57.0 : 61.0 : Nil
+
+comp A1 = Nil
+
+comp Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
+
+comp Ry1 = t1c440 <$> 56.0 : 58.0 : 60.0 : Nil
+
+comp Strange1 = t1c440 <$> 58.0 : 61.0 : 63.0 : Nil
+
+comp En1 = t1c440 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
+
+comp Chan1 = t1c440 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
+
+comp Ted1 = t1c440 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
+
+comp Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
+
+comp They2 = t1c440 <$> 58.0 : 61.0 : 64.0 : 67.0 : Nil
+
+comp Say2 = t1c440 <$> 57.0 : 61.0 : 63.0 : 66.0 : Nil
+
+comp He2 = t1c440 <$> 55.0 : 58.0 : 62.0 : 65.0 : Nil
+
+comp Wan2 = t1c440 <$> 57.0 : 61.0 : 64.0 : 68.0 : Nil
+
+comp Dered2 = t1c440 <$> 60.0 : 63.0 : 66.0 : 67.0 : 71.0 : Nil
+
+comp Ve2 = t1c440 <$> 59.0 : 63.0 : 66.0 : 70.0 : Nil
+
+comp Ry2 = t1c440 <$> 60.0 : 63.0 : 66.0 : 69.0 : Nil
+
+comp Far2 = t1c440 <$> 61.0 : 62.0 : 66.0 : 68.0 : Nil
+
+comp Ve3 = t1c440 <$> 60.0 : 63.0 : 67.0 : 71.0 : Nil
+
+comp Ry3 = t1c440 <$> 61.0 : 63.0 : 65.0 : 70.0 : Nil
+
+comp Far3 = t1c440 <$> 60.0 : 62.0 : 64.0 : 68.0 : Nil
+
+comp O3 = t1c440 <$> 60.0 : 63.0 : 64.0 : 68.0 : Nil
+
+comp Ver4 = t1c440 <$> 59.0 : 62.0 : 66.0 : Nil
+
+comp Land4 = t1c440 <$> 61.0 : 63.0 : 67.0 : 70.0 : Nil
+
+comp And4 = t1c440 <$> 57.0 : 59.0 : 62.0 : 66.0 : Nil
+
+comp Sea4 = t1c440 <$> 56.0 : 60.0 : 61.0 : 65.0 : Nil
+
+comp A5 = t1c440 <$> 57.0 : Nil
+
+comp Lit5 = t1c440 <$> 58.0 : 61.0 : 65.0 : 69.0 : Nil
+
+comp Tle5 = t1c440 <$> 60.0 : 63.0 : 68.0 : 70.0 : Nil
+
+comp Shy5 = t1c440 <$> 57.0 : 63.0 : 65.0 : 68.0 : Nil
+
+comp And5 = t1c440 <$> 57.0 : 61.0 : 64.0 : Nil
+
+comp Sad5 = t1c440 <$> 60.0 : 63.0 : 70.0 : Nil
+
+comp Of5 = t1c440 <$> 60.0 : 63.0 : 67.0 : 69.0 : Nil
+
+comp Eye5 = t1c440 <$> 59.0 : 63.0 : 66.0 : 68.0 : Nil
+
+comp But6 = t1c440 <$> 58.0 : 59.0 : Nil
+
+comp Ve6 = t1c440 <$> 54.0 : 56.0 : 60.0 : Nil
+
+comp Ry6 = t1c440 <$> 55.0 : 58.0 : 61.0 : Nil
+
+comp Wise6 = t1c440 <$> 58.0 : 61.0 : 64.0 : Nil
+
+comp Was6 = t1c440 <$> 58.0 : 62.0 : 65.0 : Nil
+
+comp He6 = t1c440 <$> 57.0 : 60.0 : 63.0 : Nil
+
+comp And7 = Nil
+
+comp Then7 = Nil
+
+comp One7 = Nil
+
+comp Day7 = Nil
+
+comp One8 = Nil
+
+comp Ma8 = Nil
+
+comp Gic8 = Nil
+
+comp Day8 = Nil
+
+comp He8 = Nil
+
+comp Passed8 = Nil
+
+comp My8 = Nil
+
+comp Way8 = Nil
+
+comp And9 = Nil
+
+comp While9 = Nil
+
+comp We9 = Nil
+
+comp Spoke9 = Nil
+
+comp Of9 = Nil
+
+comp Ma9 = Nil
+
+comp Ny9 = Nil
+
+comp Things9 = Nil
+
+comp Fools10 = Nil
+
+comp And10 = Nil
+
+comp Kings10 = Nil
+
+comp This11 = Nil
+
+comp He11 = Nil
+
+comp Said11 = Nil
+
+comp To11 = Nil
+
+comp Me11 = Nil
+
+comp The12 = Nil
+
+comp Great12 = Nil
+
+comp Est12 = Nil
+
+comp Thing12 = Nil
+
+comp You'll12 = Nil
+
+comp E12 = Nil
+
+comp Ver12 = Nil
+
+comp Learn12 = Nil
+
+comp Is13 = Nil
+
+comp Just13 = Nil
+
+comp To13 = Nil
+
+comp Love13 = Nil
+
+comp And13 = Nil
+
+comp Be13 = Nil
+
+comp Loved13 = Nil
+
+comp In13 = Nil
+
+comp Re13 = Nil
+
+comp Turn13 = Nil
+
+simpleOsc :: (String -> Number -> AudioUnit D1) -> String -> List (Tuple Number Number) -> AudioUnit D2
+simpleOsc f s Nil = zero
+
+simpleOsc f s (h : t) =
+  pannerMono_ (s <> "_pmono") 0.0
+    ( gain_ (s <> "_gain") 1.0
+        ( gain_'
+            (s <> "_firstgn")
+            (fst h)
+            (f (s <> "_firstosc") (snd h))
+            :| L.mapWithIndex (\i n -> gain_' (s <> "osc" <> show i) (fst n) $ f (s <> "osc" <> show i) (snd n)) t
+        )
+    )
+
+sSinOsc :: String -> List (Tuple Number Number) -> AudioUnit D2
+sSinOsc = simpleOsc sinOsc_
+
+epwf :: Array (Tuple Number Number) -> Number -> AudioParameter
+epwf = evalPiecewise kr
 
 data Marker
   = There0
@@ -786,14 +1011,36 @@ makeCanvas (CanvasInfo ci) pads backAction forwardAction acc =
           <> filled (fillColor (rgb 1 17 2)) (rectangle forwardRect.x forwardRect.y forwardRect.width forwardRect.height)
       )
 
-scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D1 NatureBoyAccumulator)
+toNel :: List (AudioUnit D2) -> NonEmpty List (AudioUnit D2)
+toNel Nil = zero :| Nil
+
+toNel (h : t) = h :| t
+
+scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
 scene inter acc' ci'@(CanvasInfo ci) _ = f <$> (interactionLog inter)
   where
   f p =
     AV
-      (Just (speaker' zero))
+      ( Just
+          ( speaker
+              ( pmic
+                  :| ( maybe Nil
+                        ( \cm ->
+                            ( simpleOsc (\s n -> periodicOsc_ ("po_" <> s) "smooth" n) (m2s cm) (comp cm)
+                                * audioWorkletProcessor_ "compGate"
+                                    "klank-amplitude"
+                                    O.empty
+                                    pmic
+                            )
+                              : Nil
+                        )
+                        retAcc.currentMarker
+                    )
+              )
+          )
+      )
       (Just (snd cvs))
-      (fst cvs)
+      retAcc
     where
     acc =
       acc'
@@ -810,6 +1057,8 @@ scene inter acc' ci'@(CanvasInfo ci) _ = f <$> (interactionLog inter)
     curScreen = screen2markerAccf acc.currentScreen
 
     cvs = makeCanvas ci' curScreen (backFrom acc.currentScreen) (forwardFrom acc.currentScreen) acc
+
+    retAcc = fst cvs
 
 main :: Klank' NatureBoyAccumulator
 main =
@@ -828,6 +1077,19 @@ main =
           , currentScreen: ThereWasABoy
           }
     , exporter = defaultExporter
+    , enableMicrophone = true
+    , worklets =
+      \_ res rej ->
+        res
+          [ "https://klank-share.s3.eu-west-1.amazonaws.com/K16050057737584320.js" -- smoothing amplitude tracker
+          ]
+    , periodicWaves =
+      \ctx _ res rej -> do
+        pw <-
+          makePeriodicWave ctx
+            (0.5 +> 0.25 +> -0.1 +> 0.07 +> 0.1 +> empty)
+            (0.2 +> 0.1 +> 0.01 +> -0.03 +> -0.1 +> empty)
+        res $ O.singleton "smooth" pw
     }
 
 newtype Interactions
