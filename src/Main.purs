@@ -2,9 +2,14 @@ module Klank.Dev where
 
 import Prelude
 import Color (Color, rgb)
-import Data.Array (catMaybes, head, length, mapWithIndex, range)
+import Control.Parallel (parallel, sequential)
+import Control.Promise (toAffE)
+import Data.Array (catMaybes, filter, head, length, mapWithIndex, range)
+import Data.Either (either)
 import Data.Foldable (fold, foldl, traverse_)
 import Data.Int (toNumber)
+import Effect.Exception (Error)
+import Data.Lens (_2, over)
 import Data.List (List(..), (:))
 import Data.List as L
 import Data.Map as M
@@ -14,13 +19,15 @@ import Data.NonEmpty (NonEmpty, (:|))
 import Data.Profunctor (lcmap)
 import Data.String (Pattern(..), indexOf)
 import Data.Symbol (SProxy(..))
+import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Typelevel.Num (D1, D2)
 import Data.Vec ((+>), empty)
 import Effect (Effect)
+import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioParameter, AudioUnit, CanvasInfo(..), audioWorkletProcessor_, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -29,7 +36,7 @@ import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
 import Math (pi, pow, sin, (%))
 import Record.Extra (SLProxy(..), SNil)
 import Type.Data.Graph (type (:/))
-import Type.Klank.Dev (Klank', defaultEngineInfo, klank)
+import Type.Klank.Dev (Klank', affable, defaultEngineInfo, klank)
 import Web.Event.EventTarget (addEventListener, eventListener, removeEventListener)
 import Web.HTML (window)
 import Web.HTML.Navigator (userAgent)
@@ -97,6 +104,39 @@ pmic s = pannerMono_ ("voicePanner" <> s) 0.0 (mic s)
 
 t1c440 :: Number -> Tuple Number Number
 t1c440 = Tuple 1.0 <<< conv440
+
+loopDownload :: AudioContext -> String -> Aff BrowserAudioBuffer
+loopDownload ctx str =
+  res
+    >>= either
+        ( \e -> do
+            delay (Milliseconds 20.0)
+            loopDownload ctx str
+        )
+        pure
+  where
+  res = try $ toAffE (decodeAudioDataFromUri ctx str)
+
+makeBuffersUsingCache :: (O.Object BrowserAudioBuffer -> Tuple (Array (Tuple String String)) (O.Object BrowserAudioBuffer)) -> AudioContext -> O.Object BrowserAudioBuffer -> (O.Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+makeBuffersUsingCache bf ctx prev' =
+  affable do
+    sequential
+      ( O.union <$> (pure prev)
+          <*> ( sequence
+                $ O.fromFoldable
+                    ( map
+                        ( over _2
+                            (parallel <<< loopDownload ctx)
+                        )
+                        (filter (not <<< flip O.member prev <<< fst) newB)
+                    )
+            )
+      )
+  where
+  (Tuple newB prev) = bf prev'
+
+makeBuffersKeepingCache :: Array (Tuple String String) -> AudioContext -> O.Object BrowserAudioBuffer -> (O.Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+makeBuffersKeepingCache = makeBuffersUsingCache <<< Tuple
 
 -----------------------
 ------------------
@@ -1230,6 +1270,10 @@ main =
         res
           [ "https://klank-share.s3.eu-west-1.amazonaws.com/K16050057737584320.js" -- smoothing amplitude tracker
           ]
+    , buffers =
+      makeBuffersKeepingCache
+        [ Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-lq.mp3"
+        ]
     , periodicWaves =
       \ctx _ res rej -> do
         pw <-
