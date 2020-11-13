@@ -1273,6 +1273,18 @@ main =
     , buffers =
       makeBuffersKeepingCache
         [ Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-lq.mp3"
+        , Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-lq.mp3"
+        , Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-lq.mp3"
+        , Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-lq.mp3"
+        , Tuple "low-energized" "https://freesound.org/data/previews/33/33182_250881-lq.mp3"
+        , Tuple "ethereal" "https://freesound.org/data/previews/352/352944_6523136-lq.mp3"
+        , Tuple "swelling-low" "https://freesound.org/data/previews/119/119059_181941-lq.mp3"
+        , Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-lq.mp3"
+        , Tuple "low-deep" "https://freesound.org/data/previews/350/350660_1676145-lq.mp3"
+        , Tuple "knock-pad" "https://freesound.org/data/previews/7/7402_1629-lq.mp3"
+        , Tuple "gnarly-feedback" "https://freesound.org/data/previews/213/213906_862453-lq.mp3"
+        , Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-lq.mp3"
+        , Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-lq.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
