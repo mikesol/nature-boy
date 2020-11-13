@@ -7,24 +7,28 @@ import Data.Foldable (fold, foldl, traverse_)
 import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as L
+import Data.Map as M
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.Newtype (wrap)
 import Data.NonEmpty (NonEmpty, (:|))
 import Data.Profunctor (lcmap)
 import Data.String (Pattern(..), indexOf)
+import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Typelevel.Num (D1, D2)
 import Data.Vec ((+>), empty)
 import Effect (Effect)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioParameter, AudioUnit, CanvasInfo(..), audioWorkletProcessor_, defaultExporter, evalPiecewise, gain_, gain_', makePeriodicWave, microphone, pannerMono_, periodicOsc_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioParameter, AudioUnit, CanvasInfo(..), audioWorkletProcessor_, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
 import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
-import Math (pow, (%))
+import Math (pi, pow, sin, (%))
+import Record.Extra (SLProxy(..), SNil)
+import Type.Data.Graph (type (:/))
 import Type.Klank.Dev (Klank', defaultEngineInfo, klank)
 import Web.Event.EventTarget (addEventListener, eventListener, removeEventListener)
 import Web.HTML (window)
@@ -36,17 +40,41 @@ import Web.TouchEvent.TouchList as TL
 import Web.UIEvent.MouseEvent (MouseEvent)
 import Web.UIEvent.MouseEvent as ME
 
-boundByQueue_ :: forall acc a. Monoid a => Marker -> Marker -> (acc -> Marker -> Number -> Tuple acc a) -> acc -> Marker -> Number -> Tuple acc a
-boundByQueue_ st ed f ac m n = if m >= st && m <= ed then f ac m n else Tuple ac mempty
+-- There
+-- Was   (was)    (was)    (was)
+-- A     (aaaaaaaaaaaaa)
+-- Boy (boy) (boy) (boy) (boy) (boy) (boy)
+-- A very strange enchanted boy [[chords]]  (on ve-  start A drone) (chan = E) (boy = F#)
+-- They (they they they)  (+ G# drone)
+-- say he wandered
+-- Ve (C#)
+-- And then one day starts to have sawtooth delay
+boundByCue_ :: forall acc a. Monoid a => Marker -> Marker -> (acc -> Marker -> Number -> Tuple acc a) -> acc -> Marker -> Number -> Tuple acc a
+boundByCue_ st ed f ac m n = if m >= st && m <= ed then f ac m n else Tuple ac mempty
 
-boundByQueue :: forall acc a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> acc -> Marker -> Number -> Tuple acc a
-boundByQueue st ed f = boundByQueue_ st ed (\a m n -> Tuple a $ f m n)
+boundByCue :: forall acc a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> acc -> Marker -> Number -> Tuple acc a
+boundByCue st ed f = boundByCue_ st ed (\a m n -> Tuple a $ f m n)
 
-boundByQueue' :: forall acc a. Monoid a => Marker -> Marker -> (Number -> a) -> acc -> Marker -> Number -> Tuple acc a
-boundByQueue' st ed f = boundByQueue_ st ed (\a m n -> Tuple a $ f n)
+boundByCue' :: forall acc a. Monoid a => Marker -> Marker -> (Number -> a) -> acc -> Marker -> Number -> Tuple acc a
+boundByCue' st ed f = boundByCue_ st ed (\a m n -> Tuple a $ f n)
 
-boundByQueue'' :: forall acc a. Monoid a => Marker -> Marker -> a -> acc -> Marker -> Number -> Tuple acc a
-boundByQueue'' st ed f = boundByQueue_ st ed (\a m n -> Tuple a f)
+boundByCue'' :: forall acc a. Monoid a => Marker -> Marker -> a -> acc -> Marker -> Number -> Tuple acc a
+boundByCue'' st ed f = boundByCue_ st ed (\a m n -> Tuple a f)
+
+boundByCueNac_ :: forall a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> Marker -> Number -> a
+boundByCueNac_ st ed f m n = if m >= st && m <= ed then f m n else mempty
+
+boundByCueNac :: forall a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> Marker -> Number -> a
+boundByCueNac st ed f = boundByCueNac_ st ed (\m n -> f m n)
+
+boundByCueNac' :: forall a. Monoid a => Marker -> Marker -> (Number -> a) -> Marker -> Number -> a
+boundByCueNac' st ed f = boundByCueNac_ st ed (\_ n -> f n)
+
+boundByCueNac'' :: forall a. Monoid a => Marker -> Marker -> a -> Marker -> Number -> a
+boundByCueNac'' st ed f = boundByCueNac_ st ed (\_ _ -> f)
+
+boundByCueNac''' :: forall a. Monoid a => Marker -> Marker -> a -> Marker -> a
+boundByCueNac''' st ed f m = boundByCueNac_ st ed (\_ _ -> f) m 0.0
 
 conv440 :: Number -> Number
 conv440 i = 440.0 * (2.0 `pow` ((i - 69.0) / 12.0))
@@ -62,13 +90,116 @@ boundPlayer len a time = if (time) + kr >= 0.0 && time < (len) then a time else 
 
 kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
 
-mic = microphone :: AudioUnit D1
+mic = microphone_ :: String -> AudioUnit D1
 
-pmic = pannerMono_ "voicePanner" 0.0 mic :: AudioUnit D2
+pmic :: String -> AudioUnit D2
+pmic s = pannerMono_ ("voicePanner" <> s) 0.0 (mic s)
 
 t1c440 :: Number -> Tuple Number Number
 t1c440 = Tuple 1.0 <<< conv440
 
+-----------------------
+------------------
+-----------
+------
+--
+type SigAU
+  = NatureBoyAccumulator -> Marker -> Number -> Tuple NatureBoyAccumulator (List (AudioUnit D2))
+
+there0 :: SigAU
+there0 =
+  boundByCue There0 There0
+    (\m t -> pure (pmic "Was0Mic"))
+
+was0 :: SigAU
+was0 =
+  boundByCue Was0 Boy0
+    ( \m t ->
+        pure
+          $ graph_ "Was0Graph"
+              { aggregators:
+                  { out: Tuple (g'add_ "Was0Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "Was0Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "Was0Gain" 0.7) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "Was0Delay" 0.4) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' Was0 Was0 (pmic "Was0Mic") m
+                  }
+              }
+    )
+
+a0 :: SigAU
+a0 =
+  boundByCue A0 Boy0
+    ( \m t ->
+        pure
+          $ graph_ "A0Graph"
+              { aggregators:
+                  { out: Tuple (g'add_ "A0Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "A0Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "A0Gain" 0.4) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "A0Delay" 0.1) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' A0 A0 (pmic "A0Mic") m
+                  }
+              }
+    )
+
+boy0 :: SigAU
+boy0 =
+  boundByCue_ Boy0 A1
+    ( \ac m t ->
+        Tuple ac
+          ( pure
+              $ dup2
+                  ( graph_ "Boy0Graph"
+                      { aggregators:
+                          { out: Tuple (g'add_ "Boy0Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                          , combine: Tuple (g'add_ "Boy0Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                          , gain: Tuple (g'gain_ "Boy0Gain" 0.6) (SLProxy :: SLProxy ("del" :/ SNil))
+                          }
+                      , processors:
+                          { del: Tuple (g'delay_ "Boy0Delay" 0.26) (SProxy :: SProxy "combine")
+                          }
+                      , generators:
+                          { mic: boundByCueNac''' Boy0 Boy0 (pmic "Boy0Mic") m
+                          }
+                      }
+                  ) \d ->
+                  -- adds a small octave descant
+                  ( gain_ "Boy0Comb" 1.0
+                      ( d
+                          :| ( maybe Nil
+                                ( \onset ->
+                                    ( gain_' "Boy0RampUpOsc" (min 1.0 (0.5 * (t - onset)))
+                                        $ mul_ "Boy0Mul"
+                                            ( ( pannerMono_ "Boy0OctavePan" (0.3 * sin (0.8 * pi * t))
+                                                  $ periodicOsc_ "Boy0Octave" "smooth" (conv440 61.0)
+                                              )
+                                                :| ( audioWorkletProcessor_ "Boy0OctaveGate"
+                                                      "klank-amplitude"
+                                                      O.empty
+                                                      d
+                                                  )
+                                                : Nil
+                                            )
+                                    )
+                                      : Nil
+                                )
+                                (M.lookup m ac.markerOnsets)
+                            )
+                      )
+                  )
+          )
+    )
+
+------------------------
 comp :: Marker -> List (Tuple Number Number)
 comp There0 = Nil
 
@@ -791,6 +922,7 @@ type NatureBoyAccumulator
     , mousePosition :: Maybe { x :: Number, y :: Number }
     , currentMarker :: Maybe Marker
     , currentScreen :: Screen
+    , markerOnsets :: M.Map Marker Number
     }
 
 inRect :: Point -> Rectangle -> Boolean
@@ -826,7 +958,17 @@ boldItalic :: FontOptions
 boldItalic = bold <> italic
 
 screen2markerAccf :: Screen -> Array MarkerAccf
-screen2markerAccf screen = (\x -> Tuple x (_ { currentMarker = Just x })) <$> go screen
+screen2markerAccf screen =
+  ( \x ->
+      Tuple x
+        ( \t ac ->
+            ac
+              { currentMarker = Just x
+              , markerOnsets = (M.insert x t ac.markerOnsets)
+              }
+        )
+  )
+    <$> go screen
   where
   go ThereWasABoy = [ There0, Was0, A0, Boy0 ]
 
@@ -951,10 +1093,10 @@ screen2markerAccf screen = (\x -> Tuple x (_ { currentMarker = Just x })) <$> go
     ]
 
 type MarkerAccf
-  = Tuple Marker (NatureBoyAccumulator -> NatureBoyAccumulator)
+  = Tuple Marker (Number -> NatureBoyAccumulator -> NatureBoyAccumulator)
 
-makeCanvas :: CanvasInfo -> Array MarkerAccf -> (NatureBoyAccumulator -> NatureBoyAccumulator) -> (NatureBoyAccumulator -> NatureBoyAccumulator) -> NatureBoyAccumulator -> Tuple NatureBoyAccumulator Drawing
-makeCanvas (CanvasInfo ci) pads backAction forwardAction acc =
+makeCanvas :: CanvasInfo -> Number -> Array MarkerAccf -> (NatureBoyAccumulator -> NatureBoyAccumulator) -> (NatureBoyAccumulator -> NatureBoyAccumulator) -> NatureBoyAccumulator -> Tuple NatureBoyAccumulator Drawing
+makeCanvas (CanvasInfo ci) time pads backAction forwardAction acc =
   let
     lpads = length pads
 
@@ -980,7 +1122,7 @@ makeCanvas (CanvasInfo ci) pads backAction forwardAction acc =
     forwardRect = { x: ci.w / 4.0, y: 3.0 * ci.h / 4.0, height: ci.h / 4.0, width: 3.0 * ci.w / 4.0 }
   in
     Tuple
-      ( foldl (\newAcc tpl -> if doAction newAcc (fst tpl) then ((snd <<< snd) tpl newAcc) else newAcc)
+      ( foldl (\newAcc tpl -> if doAction newAcc (fst tpl) then ((snd <<< snd) tpl time newAcc) else newAcc)
           ( if doAction acc backRect then
               backAction acc
             else
@@ -1016,31 +1158,31 @@ toNel Nil = zero :| Nil
 
 toNel (h : t) = h :| t
 
+{-
+( maybe Nil
+  ( \cm ->
+      ( simpleOsc (\s n -> periodicOsc_ ("po_" <> s) "smooth" n) (m2s cm) (comp cm)
+          * audioWorkletProcessor_ "compGate"
+              "klank-amplitude"
+              O.empty
+              (pmic "gatingSignal")
+      )
+        : Nil
+  )
+  retAcc.currentMarker
+)
+-}
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
-scene inter acc' ci'@(CanvasInfo ci) _ = f <$> (interactionLog inter)
+scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
   where
-  f p =
+  go p =
     AV
       ( Just
-          ( speaker
-              ( pmic
-                  :| ( maybe Nil
-                        ( \cm ->
-                            ( simpleOsc (\s n -> periodicOsc_ ("po_" <> s) "smooth" n) (m2s cm) (comp cm)
-                                * audioWorkletProcessor_ "compGate"
-                                    "klank-amplitude"
-                                    O.empty
-                                    pmic
-                            )
-                              : Nil
-                        )
-                        retAcc.currentMarker
-                    )
-              )
+          ( speaker (toNel players.aus)
           )
       )
       (Just (snd cvs))
-      retAcc
+      players.audAcc
     where
     acc =
       acc'
@@ -1056,9 +1198,13 @@ scene inter acc' ci'@(CanvasInfo ci) _ = f <$> (interactionLog inter)
 
     curScreen = screen2markerAccf acc.currentScreen
 
-    cvs = makeCanvas ci' curScreen (backFrom acc.currentScreen) (forwardFrom acc.currentScreen) acc
+    cvs = makeCanvas ci' time curScreen (backFrom acc.currentScreen) (forwardFrom acc.currentScreen) acc
 
-    retAcc = fst cvs
+    vizAcc = fst cvs
+
+    initialV = { aus: Nil, audAcc: vizAcc }
+
+    players = maybe initialV (\mk -> foldl (\{ aus, audAcc } f -> let (Tuple ak au) = f audAcc mk time in { audAcc: ak, aus: au <> aus }) initialV [ there0, was0, a0, boy0 ]) acc.currentMarker
 
 main :: Klank' NatureBoyAccumulator
 main =
@@ -1075,6 +1221,7 @@ main =
           , mousePosition: Nothing
           , currentMarker: Nothing
           , currentScreen: ThereWasABoy
+          , markerOnsets: M.empty
           }
     , exporter = defaultExporter
     , enableMicrophone = true
