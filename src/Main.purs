@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gainT_', gain_, gain_', graph_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gainT_', gain_, gain_', graph_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -317,183 +317,48 @@ veRyStrangeEn =
         )
     )
 
+chan1 :: SigAU
+chan1 =
+  boundByCue Chan1 Chan1
+    ( \m t ->
+        pure
+          $ graph_ "Chan1Graph"
+              { aggregators:
+                  { out: Tuple (g'add_ "Chan1Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "Chan1Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "Chan1Gain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "Chan1Delay" 0.25) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' Chan1 Chan1 (pmic "Chan1Mic") m
+                  }
+              }
+    )
+
+tedBoy :: SigAU
+tedBoy =
+  boundByCue There0 There0
+    (\m t -> pure (pmic "TedBoyMic"))
+
 ------------------------
-comp :: Marker -> List (Tuple Number Number)
-comp There0 = Nil
+compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
+compVeryStrangeEnchantedBoy Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
 
-comp Was0 = t1c440 <$> 60.0 : 63.0 : 64.0 : 68.0 : Nil
+compVeryStrangeEnchantedBoy Ry1 = t1c440 <$> 56.0 : 58.0 : 60.0 : Nil
 
-comp A0 = t1c440 <$> 56.0 : 59.0 : 61.0 : 64.0 : Nil
+compVeryStrangeEnchantedBoy Strange1 = t1c440 <$> 58.0 : 61.0 : 63.0 : Nil
 
-comp Boy0 = t1c440 <$> 54.0 : 56.0 : 57.0 : 61.0 : Nil
+compVeryStrangeEnchantedBoy En1 = t1c440 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
 
-comp A1 = Nil
+compVeryStrangeEnchantedBoy Chan1 = t1c440 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
 
-comp Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
+compVeryStrangeEnchantedBoy Ted1 = t1c440 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
 
-comp Ry1 = t1c440 <$> 56.0 : 58.0 : 60.0 : Nil
+compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
 
-comp Strange1 = t1c440 <$> 58.0 : 61.0 : 63.0 : Nil
-
-comp En1 = t1c440 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
-
-comp Chan1 = t1c440 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
-
-comp Ted1 = t1c440 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
-
-comp Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
-
-comp They2 = t1c440 <$> 58.0 : 61.0 : 64.0 : 67.0 : Nil
-
-comp Say2 = t1c440 <$> 57.0 : 61.0 : 63.0 : 66.0 : Nil
-
-comp He2 = t1c440 <$> 55.0 : 58.0 : 62.0 : 65.0 : Nil
-
-comp Wan2 = t1c440 <$> 57.0 : 61.0 : 64.0 : 68.0 : Nil
-
-comp Dered2 = t1c440 <$> 60.0 : 63.0 : 66.0 : 67.0 : 71.0 : Nil
-
-comp Ve2 = t1c440 <$> 59.0 : 63.0 : 66.0 : 70.0 : Nil
-
-comp Ry2 = t1c440 <$> 60.0 : 63.0 : 66.0 : 69.0 : Nil
-
-comp Far2 = t1c440 <$> 61.0 : 62.0 : 66.0 : 68.0 : Nil
-
-comp Ve3 = t1c440 <$> 60.0 : 63.0 : 67.0 : 71.0 : Nil
-
-comp Ry3 = t1c440 <$> 61.0 : 63.0 : 65.0 : 70.0 : Nil
-
-comp Far3 = t1c440 <$> 60.0 : 62.0 : 64.0 : 68.0 : Nil
-
-comp O3 = t1c440 <$> 60.0 : 63.0 : 64.0 : 68.0 : Nil
-
-comp Ver4 = t1c440 <$> 59.0 : 62.0 : 66.0 : Nil
-
-comp Land4 = t1c440 <$> 61.0 : 63.0 : 67.0 : 70.0 : Nil
-
-comp And4 = t1c440 <$> 57.0 : 59.0 : 62.0 : 66.0 : Nil
-
-comp Sea4 = t1c440 <$> 56.0 : 60.0 : 61.0 : 65.0 : Nil
-
-comp A5 = t1c440 <$> 57.0 : Nil
-
-comp Lit5 = t1c440 <$> 58.0 : 61.0 : 65.0 : 69.0 : Nil
-
-comp Tle5 = t1c440 <$> 60.0 : 63.0 : 68.0 : 70.0 : Nil
-
-comp Shy5 = t1c440 <$> 57.0 : 63.0 : 65.0 : 68.0 : Nil
-
-comp And5 = t1c440 <$> 57.0 : 61.0 : 64.0 : Nil
-
-comp Sad5 = t1c440 <$> 60.0 : 63.0 : 70.0 : Nil
-
-comp Of5 = t1c440 <$> 60.0 : 63.0 : 67.0 : 69.0 : Nil
-
-comp Eye5 = t1c440 <$> 59.0 : 63.0 : 66.0 : 68.0 : Nil
-
-comp But6 = t1c440 <$> 58.0 : 59.0 : Nil
-
-comp Ve6 = t1c440 <$> 54.0 : 56.0 : 60.0 : Nil
-
-comp Ry6 = t1c440 <$> 55.0 : 58.0 : 61.0 : Nil
-
-comp Wise6 = t1c440 <$> 58.0 : 61.0 : 64.0 : Nil
-
-comp Was6 = t1c440 <$> 58.0 : 62.0 : 65.0 : Nil
-
-comp He6 = t1c440 <$> 57.0 : 60.0 : 63.0 : Nil
-
-comp And7 = Nil
-
-comp Then7 = Nil
-
-comp One7 = Nil
-
-comp Day7 = Nil
-
-comp One8 = Nil
-
-comp Ma8 = Nil
-
-comp Gic8 = Nil
-
-comp Day8 = Nil
-
-comp He8 = Nil
-
-comp Passed8 = Nil
-
-comp My8 = Nil
-
-comp Way8 = Nil
-
-comp And9 = Nil
-
-comp While9 = Nil
-
-comp We9 = Nil
-
-comp Spoke9 = Nil
-
-comp Of9 = Nil
-
-comp Ma9 = Nil
-
-comp Ny9 = Nil
-
-comp Things9 = Nil
-
-comp Fools10 = Nil
-
-comp And10 = Nil
-
-comp Kings10 = Nil
-
-comp This11 = Nil
-
-comp He11 = Nil
-
-comp Said11 = Nil
-
-comp To11 = Nil
-
-comp Me11 = Nil
-
-comp The12 = Nil
-
-comp Great12 = Nil
-
-comp Est12 = Nil
-
-comp Thing12 = Nil
-
-comp You'll12 = Nil
-
-comp E12 = Nil
-
-comp Ver12 = Nil
-
-comp Learn12 = Nil
-
-comp Is13 = Nil
-
-comp Just13 = Nil
-
-comp To13 = Nil
-
-comp Love13 = Nil
-
-comp And13 = Nil
-
-comp Be13 = Nil
-
-comp Loved13 = Nil
-
-comp In13 = Nil
-
-comp Re13 = Nil
-
-comp Turn13 = Nil
+compVeryStrangeEnchantedBoy _ = Nil
 
 simpleOsc :: (String -> Number -> AudioUnit D1) -> String -> List (Tuple Number Number) -> AudioUnit D2
 simpleOsc f s Nil = zero
@@ -1276,20 +1141,18 @@ toNel Nil = zero :| Nil
 
 toNel (h : t) = h :| t
 
-{-
-( maybe Nil
-  ( \cm ->
-      ( simpleOsc (\s n -> periodicOsc_ ("po_" <> s) "smooth" n) (m2s cm) (comp cm)
-          * audioWorkletProcessor_ "compGate"
-              "klank-amplitude"
-              O.empty
-              (pmic "gatingSignal")
-      )
-        : Nil
-  )
-  retAcc.currentMarker
-)
--}
+veryStrangeEnchantedBoyComp :: SigAU
+veryStrangeEnchantedBoyComp ac cm _ =
+  Tuple ac
+    ( pure
+        $ ( simpleOsc (\s n -> periodicOsc_ ("oscVeryStrangeEnchantedBoyComp" <> s) "smooth" n) (m2s cm) (compVeryStrangeEnchantedBoy cm)
+              * audioWorkletProcessor_ "gateVeryStrangeEnchantedBoyComp"
+                  "klank-amplitude"
+                  O.empty
+                  (pmic "gatingSignalVeryStrangeEnchantedBoyComp")
+          )
+    )
+
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
 scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
   where
@@ -1332,7 +1195,10 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , boy0
               , a1
               , celloVeryStrangeEnchantedDrone
+              , veryStrangeEnchantedBoyComp
               , veRyStrangeEn
+              , chan1
+              , tedBoy
               ]
         )
         acc.currentMarker
