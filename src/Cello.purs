@@ -7,7 +7,7 @@ import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (D2)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioParameter, AudioUnit, decodeAudioDataFromUri, evalPiecewise, gain', gainT_', lowpass_, playBuf_, runInBrowser, speaker')
+import FRP.Behavior.Audio (AudioParameter, AudioUnit, decodeAudioDataFromUri, evalPiecewise, gainT_', lowpass_, playBuf_, runInBrowser, speaker')
 import Foreign.Object as O
 import Math (pi)
 import Type.Klank.Dev (Buffers, Klank, affable, defaultEngineInfo, klank)
