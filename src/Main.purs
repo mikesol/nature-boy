@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, playBufWithOffset_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gainT_', gain_, gain_', graph_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -228,6 +228,68 @@ a1 :: SigAU
 a1 =
   boundByCue A1 A1
     (\m t -> pure (pmic "A1Mic"))
+
+singleLowGSharpCello :: String -> Number -> AudioUnit D2
+singleLowGSharpCello s time =
+  ( gainT_' (s <> "CelloPlayer")
+      (epwf [ Tuple 0.0 0.0, Tuple 0.5 1.0, Tuple 2.5 1.0, Tuple 3.0 0.0 ] time)
+      ( lowpass_
+          (s <> "CelloPlayer")
+          (75.0)
+          10.0
+          (playBuf_ (s <> "CelloPlayer") "low-g#" 1.0)
+      )
+  )
+
+boundLowGSharpCello :: String -> Number -> List (AudioUnit D2)
+boundLowGSharpCello s = boundPlayer 3.1 (map pure (singleLowGSharpCello s))
+
+-- creates a pad of low g# cello
+celloLowGSharpRack :: Number -> List (AudioUnit D2)
+celloLowGSharpRack time =
+  fold
+    ( mapWithIndex (\i f -> f time)
+        [ atT 0.0 $ boundLowGSharpCello "a"
+        , atT 2.5 $ boundLowGSharpCello "b"
+        , atT 5.0 $ boundLowGSharpCello "c"
+        , atT 7.5 $ boundLowGSharpCello "d"
+        , atT 10.0 $ boundLowGSharpCello "e"
+        , atT 12.5 $ boundLowGSharpCello "f"
+        ]
+    )
+
+celloVeryStrangeEnchantedDrone :: SigAU
+celloVeryStrangeEnchantedDrone =
+  boundByCue_ A1 Boy1
+    ( \ac m t ->
+        ( maybe
+            (Tuple ac Nil)
+            ( \onset ->
+                let
+                  now = t - onset
+                in
+                  Tuple ac
+                    $ ( pure
+                          ( gain_
+                              "CelloFadeInOut"
+                              ( if m < Chan1 then
+                                  -- fade in if below <= En1
+                                  (min (now * 0.5) 1.0)
+                                else
+                                  -- fade out if > Chan1
+                                  ( maybe
+                                      1.0
+                                      (\chan -> max 0.0 (1.0 - ((t - chan) * 0.5)))
+                                      (M.lookup Chan1 ac.markerOnsets)
+                                  )
+                              )
+                              (toNel (celloLowGSharpRack now))
+                          )
+                      )
+            )
+            (M.lookup A1 ac.markerOnsets)
+        )
+    )
 
 veRyStrangeEn :: SigAU
 veRyStrangeEn =
@@ -1269,6 +1331,7 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , a0
               , boy0
               , a1
+              , celloVeryStrangeEnchantedDrone
               , veRyStrangeEn
               ]
         )
