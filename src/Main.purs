@@ -8,7 +8,6 @@ import Data.Array (catMaybes, filter, head, length, mapWithIndex, range)
 import Data.Either (either)
 import Data.Foldable (fold, foldl, traverse_)
 import Data.Int (toNumber)
-import Effect.Exception (Error)
 import Data.Lens (_2, over)
 import Data.List (List(..), (:))
 import Data.List as L
@@ -25,9 +24,10 @@ import Data.Typelevel.Num (D1, D2)
 import Data.Vec ((+>), empty)
 import Effect (Effect)
 import Effect.Aff (Aff, Milliseconds(..), delay, try)
+import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -202,7 +202,7 @@ boy0 =
                       { aggregators:
                           { out: Tuple (g'add_ "Boy0Out") (SLProxy :: SLProxy ("combine" :/ SNil))
                           , combine: Tuple (g'add_ "Boy0Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                          , gain: Tuple (g'gain_ "Boy0Gain" 0.6) (SLProxy :: SLProxy ("del" :/ SNil))
+                          , gain: Tuple (g'gain_ "Boy0Gain" 0.78) (SLProxy :: SLProxy ("del" :/ SNil))
                           }
                       , processors:
                           { del: Tuple (g'delay_ "Boy0Delay" 0.26) (SProxy :: SProxy "combine")
@@ -217,10 +217,10 @@ boy0 =
                       ( d
                           :| ( maybe Nil
                                 ( \onset ->
-                                    ( gain_' "Boy0RampUpOsc" (min 1.0 (0.5 * (t - onset)))
+                                    ( gain_' "Boy0RampUpOsc" 3.5
                                         $ mul_ "Boy0Mul"
                                             ( ( pannerMono_ "Boy0OctavePan" (0.3 * sin (0.8 * pi * t))
-                                                  $ periodicOsc_ "Boy0Octave" "smooth" (conv440 61.0)
+                                                  $ playBufWithOffset_ "Boy0Octave" "flute" 1.0 3.8
                                               )
                                                 :| ( audioWorkletProcessor_ "Boy0OctaveGate"
                                                       "klank-amplitude"
@@ -1272,27 +1272,33 @@ main =
           ]
     , buffers =
       makeBuffersKeepingCache
-        [ Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-lq.mp3"
-        , Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-lq.mp3"
-        , Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-lq.mp3"
-        , Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-lq.mp3"
-        , Tuple "low-energized" "https://freesound.org/data/previews/33/33182_250881-lq.mp3"
-        , Tuple "ethereal" "https://freesound.org/data/previews/352/352944_6523136-lq.mp3"
-        , Tuple "swelling-low" "https://freesound.org/data/previews/119/119059_181941-lq.mp3"
-        , Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-lq.mp3"
-        , Tuple "low-deep" "https://freesound.org/data/previews/350/350660_1676145-lq.mp3"
-        , Tuple "knock-pad" "https://freesound.org/data/previews/7/7402_1629-lq.mp3"
-        , Tuple "gnarly-feedback" "https://freesound.org/data/previews/213/213906_862453-lq.mp3"
-        , Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-lq.mp3"
-        , Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-lq.mp3"
+        [ Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
+        , Tuple "flute" "https://media.graphcms.com/eiKfSNIbSaiomCZQzXGA"
+        --, Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-hq.mp3"
+        --, Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-hq.mp3"
+        --, Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-hq.mp3"
+        --, Tuple "low-energized" "https://freesound.org/data/previews/33/33182_250881-hq.mp3"
+        --, Tuple "ethereal" "https://freesound.org/data/previews/352/352944_6523136-hq.mp3"
+        --, Tuple "swelling-low" "https://freesound.org/data/previews/119/119059_181941-hq.mp3"
+        --, Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-hq.mp3"
+        --, Tuple "low-deep" "https://freesound.org/data/previews/350/350660_1676145-hq.mp3"
+        --, Tuple "knock-pad" "https://freesound.org/data/previews/7/7402_1629-hq.mp3"
+        --, Tuple "gnarly-feedback" "https://freesound.org/data/previews/213/213906_862453-hq.mp3"
+        --, Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-hq.mp3"
+        --, Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
+        --, Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
-        pw <-
+        smooth <-
           makePeriodicWave ctx
             (0.5 +> 0.25 +> -0.1 +> 0.07 +> 0.1 +> empty)
             (0.2 +> 0.1 +> 0.01 +> -0.03 +> -0.1 +> empty)
-        res $ O.singleton "smooth" pw
+        rich <-
+          makePeriodicWave ctx
+            (0.1 +> 0.3 +> -0.1 +> 0.1 +> 0.2 +> 0.05 +> 0.1 +> 0.01 +> empty)
+            (0.3 +> -0.5 +> -0.4 +> -0.03 +> -0.15 +> -0.2 +> -0.05 +> -0.02 +> empty)
+        res $ O.fromFoldable [ Tuple "smooth" smooth, Tuple "rich" rich ]
     }
 
 newtype Interactions
