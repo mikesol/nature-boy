@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gain_, gain_', graph_, makePeriodicWave, microphone_, mul_, pannerMono_, playBufWithOffset_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -173,23 +173,8 @@ was0 =
 
 a0 :: SigAU
 a0 =
-  boundByCue A0 Boy0
-    ( \m t ->
-        pure
-          $ graph_ "A0Graph"
-              { aggregators:
-                  { out: Tuple (g'add_ "A0Out") (SLProxy :: SLProxy ("combine" :/ SNil))
-                  , combine: Tuple (g'add_ "A0Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "A0Gain" 0.4) (SLProxy :: SLProxy ("del" :/ SNil))
-                  }
-              , processors:
-                  { del: Tuple (g'delay_ "A0Delay" 0.1) (SProxy :: SProxy "combine")
-                  }
-              , generators:
-                  { mic: boundByCueNac''' A0 A0 (pmic "A0Mic") m
-                  }
-              }
-    )
+  boundByCue A0 A0
+    (\m t -> pure (pmic "A0Mic"))
 
 boy0 :: SigAU
 boy0 =
@@ -237,6 +222,37 @@ boy0 =
                       )
                   )
           )
+    )
+
+a1 :: SigAU
+a1 =
+  boundByCue A1 A1
+    (\m t -> pure (pmic "A1Mic"))
+
+veRyStrangeEn :: SigAU
+veRyStrangeEn =
+  boundByCue_ Ve1 En1
+    ( \ac m t ->
+        ( maybe (Tuple ac Nil)
+            ( \onset ->
+                Tuple ac
+                  $ graph_ "VeRyStrangeEnGraph"
+                      { aggregators:
+                          { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                          , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                          , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.7 (0.7 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
+                          }
+                      , processors:
+                          { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.2) (SProxy :: SProxy "combine")
+                          }
+                      , generators:
+                          { mic: boundByCueNac''' Ve1 En1 (pmic "VeRyStrangeEnMic") m
+                          }
+                      }
+                  : Nil
+            )
+            (M.lookup Ve1 ac.markerOnsets)
+        )
     )
 
 ------------------------
@@ -1244,7 +1260,19 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
 
     initialV = { aus: Nil, audAcc: vizAcc }
 
-    players = maybe initialV (\mk -> foldl (\{ aus, audAcc } f -> let (Tuple ak au) = f audAcc mk time in { audAcc: ak, aus: au <> aus }) initialV [ there0, was0, a0, boy0 ]) acc.currentMarker
+    players =
+      maybe initialV
+        ( \mk ->
+            foldl (\{ aus, audAcc } f -> let (Tuple ak au) = f audAcc mk time in { audAcc: ak, aus: au <> aus }) initialV
+              [ there0
+              , was0
+              , a0
+              , boy0
+              , a1
+              , veRyStrangeEn
+              ]
+        )
+        acc.currentMarker
 
 main :: Klank' NatureBoyAccumulator
 main =
@@ -1274,6 +1302,7 @@ main =
       makeBuffersKeepingCache
         [ Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
         , Tuple "flute" "https://media.graphcms.com/eiKfSNIbSaiomCZQzXGA"
+        , Tuple "low-g#" "https://freesound.org/data/previews/195/195285_3623377-hq.mp3"
         --, Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-hq.mp3"
         --, Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-hq.mp3"
         --, Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-hq.mp3"
