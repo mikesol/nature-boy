@@ -29,12 +29,22 @@ wobbleRate time
   | time < 5.0 = 3.0
   | otherwise = 0.2
 
-bassDroneVol :: Number -> Number -> Number
-bassDroneVol len = lcmap (_ % len) go
+skewedTriangle01 :: Number -> Number -> Number -> Number
+skewedTriangle01 os len = lcmap (_ % len) go
   where
   go time
-    | time < (len / 2.0) = (time * 2.0 / len)
-    | otherwise = (len - time) * 2.0 / len
+    | time < (len * os) = (time / (len * os))
+    | otherwise = (len - time) / (len * (1.0 - os))
+
+triangle01 :: Number -> Number -> Number
+triangle01 = skewedTriangle01 0.5
+
+bassDroneVol :: Number -> Number
+bassDroneVol time
+  | time < 2.7 = triangle01 4.0 (time - 0.0)
+  | time < 4.6 = triangle01 0.4 (time - 2.7)
+  | time < 5.6 = triangle01 1.0 (time - 4.6)
+  | otherwise = triangle01 4.0 (time - 5.6)
 
 scene :: Number -> Behavior (AudioUnit D2)
 scene time =
@@ -42,7 +52,7 @@ scene time =
     $ speaker'
         ( gain_ "C#DroneMasterFader" 1.0
             ( ( gainT_' "C#CelloLoopGain"
-                  (epwf [ Tuple 0.0 0.0, Tuple 0.15 1.0, Tuple 10.0 1.0 ] time)
+                  (epwf [ Tuple 0.0 0.0, Tuple 0.15 0.8, Tuple 10.0 0.8 ] time)
                   ( lowpass_
                       "C#CelloLoopLowpass"
                       (175.0 + (-100.0 * (cos ((wobbleRate time) * rad)))) -- 75.0 orig
@@ -50,7 +60,7 @@ scene time =
                       (loopBuf_ "C#CelloLoop" "low-c#-cello-drone" 1.0 0.5 2.5)
                   )
               )
-                :| (gain_' "C#BassGain" (1.0 * (bassDroneVol 4.0 time)) (loopBuf_ "C#BassLoop" "bass-c-sharp" 0.5 0.5 2.5))
+                :| (pannerMono_ "C#BassPan" (2.0 * (skewedTriangle01 (0.94 - (min 0.44 (time * 0.1))) 2.0 time) - 1.0) (gain_' "C#BassGain" (1.0 * (bassDroneVol time)) (loopBuf_ "C#BassLoop" "bass-c-sharp" 0.5 0.0 4.3)))
                 : Nil
             )
         )
@@ -78,7 +88,7 @@ main =
         --, Tuple "flute-c-sharp" "https://freesound.org/data/previews/154/154208_2626346-hq.mp3"
         --, Tuple "pipe-c-sharp" "https://freesound.org/data/previews/345/345192_5622625-hq.mp3"
         --, Tuple "guitar-c-sharp" "https://freesound.org/data/previews/153/153957_2626346-hq.mp3"
-        , Tuple "bass-c-sharp" "https://media.graphcms.com/iUoLXZ3S5e8uSq647NEd"
+        , Tuple "bass-c-sharp" "https://media.graphcms.com/0gp37YI7Q5mczsjAUiUH"
         --, Tuple "pizz-c-sharp" "https://freesound.org/data/previews/153/153642_2626346-hq.mp3"
         --, Tuple "pizz-e" "https://freesound.org/data/previews/153/153633_2626346-hq.mp3"
         --, Tuple "pizz-g-sharp" "https://freesound.org/data/previews/153/153637_2626346-hq.mp3"
