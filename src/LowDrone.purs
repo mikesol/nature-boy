@@ -110,6 +110,69 @@ birds =
             )
     )
 
+shriek :: Number -> List (AudioUnit D2)
+shriek =
+  boundPlayer (20.0)
+    ( \t ->
+        pure
+          $ ( gain_' ("AirRaidSirenAboveC#Gain")
+                (0.3)
+                ( graph_
+                    "AirRaidGrpah"
+                    { aggregators:
+                        { out: Tuple (g'add_ "AirRaidOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                        , combine: Tuple (g'add_ "AirRaidCombine") (SLProxy :: SLProxy ("gain" :/ "chimez" :/ SNil))
+                        , gain: Tuple (g'gain_ "AirRaidGraphGain" 0.5) (SLProxy :: SLProxy ("del" :/ SNil))
+                        }
+                    , processors:
+                        { del: Tuple (g'delay_ "AirRaidGraphDelay" 0.4) (SProxy :: SProxy "combine")
+                        }
+                    , generators:
+                        { chimez:
+                            ( if t < 4.0 then
+                                ( gainT_' "AirRaidSirenCarveGian"
+                                    ( epwf
+                                        [ Tuple 0.0 1.0
+                                        , Tuple 0.2 1.0
+                                        , Tuple 0.3 0.2
+                                        , Tuple 0.5 0.7
+                                        , Tuple 1.4 0.7
+                                        , Tuple 1.5 0.1
+                                        , Tuple 1.6 0.7
+                                        , Tuple 1.7 0.1
+                                        , Tuple 1.8 0.7
+                                        , Tuple 1.9 0.1
+                                        , Tuple 2.0 0.7
+                                        , Tuple 2.1 0.1
+                                        , Tuple 2.2 0.7
+                                        , Tuple 2.3 0.1
+                                        , Tuple 2.4 0.6
+                                        , Tuple 2.5 0.1
+                                        , Tuple 2.6 0.5
+                                        , Tuple 2.7 0.1
+                                        , Tuple 2.8 0.4
+                                        , Tuple 2.9 0.1
+                                        , Tuple 3.0 0.3
+                                        , Tuple 3.1 0.1
+                                        , Tuple 3.2 0.2
+                                        , Tuple 3.3 0.1
+                                        ]
+                                        t
+                                    )
+                                    $ playBuf_
+                                        ("AirRaidSirenAboveC#Buf")
+                                        "terrifying-air-raid-siren"
+                                        1.0
+                                )
+                              else
+                                zero
+                            )
+                        }
+                    }
+                )
+            )
+    )
+
 gongBackwards2 :: Array (Number -> List (AudioUnit D1))
 gongBackwards2 = (foldl (\{ acc, t } a -> { acc: [ atT t $ gongBackwards2Atomic (show t) a ] <> acc, t: t + a }) { acc: [], t: 0.0 } [ 0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 1.0, 1.0, 0.7, 0.4, 0.4, 0.4, 1.4, 0.5, 0.5, 0.7, 0.7, 1.0, 1.0 ]).acc
 
@@ -120,7 +183,7 @@ gongBackwards =
         pure
           $ pannerMono_ "GongAboveC#Pan" (2.0 * (skewedTriangle01 0.8 2.0 t) - 1.0)
               ( gain_ "GongBwAboveC#Gain"
-                  (2.5 * (skewedTriangle01 0.2 10.0 t))
+                  (4.0 * (skewedTriangle01 0.2 10.0 t))
                   (toNel $ fold (map (\f -> f t) gongBackwards2))
               )
     )
@@ -185,6 +248,7 @@ scene time =
                                   ( [ atT 3.0 chimez
                                     , atT 2.0 gongBackwards
                                     , atT 4.0 birds
+                                    , atT 3.0 shriek
                                     ]
                                   )
                               )
@@ -224,7 +288,7 @@ main =
         --, Tuple "bass-pizz-c-sharp" "https://freesound.org/data/previews/153/153805_2626346-hq.mp3"
         --, Tuple "guitar-high-c-sharp" "https://freesound.org/data/previews/153/153944_2626346-hq.mp3"
         --, Tuple "voice-like-c-sharp" "https://freesound.org/data/previews/315/315850_4557960-hq.mp3"
-        --, Tuple "terrifying-air-raid-siren" "https://freesound.org/data/previews/271/271132_5004228-hq.mp3"
+        , Tuple "terrifying-air-raid-siren" "https://freesound.org/data/previews/271/271132_5004228-hq.mp3"
         --, Tuple "shruti-box" "https://media.graphcms.com/qwlr3QDKQHmrLjD9smOY"
         , Tuple "chimez-above-c-sharp-drone" "https://media.graphcms.com/3Z0DXRxRtOTymo51DGev"
         , Tuple "middle-g-sharp-guitar" "https://freesound.org/data/previews/154/154013_2626346-hq.mp3"
