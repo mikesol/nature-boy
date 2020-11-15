@@ -95,6 +95,21 @@ loopT t = lcmap (_ % t)
 boundPlayer :: forall a. Number -> (Number -> List a) -> Number -> List a
 boundPlayer len a time = if (time) + kr >= 0.0 && time < (len) then a time else Nil
 
+skewedTriangle01 :: Number -> Number -> Number -> Number
+skewedTriangle01 os len = lcmap (_ % len) go
+  where
+  go time
+    | time < (len * os) = (time / (len * os))
+    | otherwise = (len - time) / (len * (1.0 - os))
+
+triangle01 :: Number -> Number -> Number
+triangle01 = skewedTriangle01 0.5
+
+toNel :: List (AudioUnit D2) -> NonEmpty List (AudioUnit D2)
+toNel Nil = zero :| Nil
+
+toNel (h : t) = h :| t
+
 kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
 
 mic = microphone_ :: String -> AudioUnit D1
@@ -1135,11 +1150,6 @@ makeCanvas (CanvasInfo ci) time pads backAction forwardAction acc =
           <> filled (fillColor (rgb 48 55 46)) (rectangle backRect.x backRect.y backRect.width backRect.height)
           <> filled (fillColor (rgb 1 17 2)) (rectangle forwardRect.x forwardRect.y forwardRect.width forwardRect.height)
       )
-
-toNel :: List (AudioUnit D2) -> NonEmpty List (AudioUnit D2)
-toNel Nil = zero :| Nil
-
-toNel (h : t) = h :| t
 
 veryStrangeEnchantedBoyComp :: SigAU
 veryStrangeEnchantedBoyComp ac cm _ =
