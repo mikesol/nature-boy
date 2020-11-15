@@ -3,13 +3,16 @@ module Klank.Cello where
 import Prelude
 import Control.Promise (toAffE)
 import Data.Int (toNumber)
+import Data.List (List(..), (:))
+import Data.NonEmpty ((:|))
+import Data.Profunctor (lcmap)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (D2)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioParameter, AudioUnit, decodeAudioDataFromUri, evalPiecewise, gainT_', loopBuf_, lowpass_, playBuf_, runInBrowser, speaker')
+import FRP.Behavior.Audio (AudioParameter, AudioUnit, decodeAudioDataFromUri, evalPiecewise, gainT_', gain_, gain_', loopBuf_, lowpass_, pannerMono_, panner_, playBuf_, runInBrowser, speaker')
 import Foreign.Object as O
-import Math (cos, pi, sin)
+import Math (cos, pi, sin, (%))
 import Type.Klank.Dev (Buffers, Klank, affable, defaultEngineInfo, klank, makeBuffersKeepingCache)
 
 epwf :: Array (Tuple Number Number) -> Number -> AudioParameter
@@ -26,17 +29,29 @@ wobbleRate time
   | time < 5.0 = 3.0
   | otherwise = 0.2
 
+bassDroneVol :: Number -> Number -> Number
+bassDroneVol len = lcmap (_ % len) go
+  where
+  go time
+    | time < (len / 2.0) = (time * 2.0 / len)
+    | otherwise = (len - time) * 2.0 / len
+
 scene :: Number -> Behavior (AudioUnit D2)
 scene time =
   pure
     $ speaker'
-        ( gainT_' "C#CelloLoopGain"
-            (epwf [ Tuple 0.0 0.0, Tuple 0.15 1.0, Tuple 10.0 1.0 ] time)
-            ( lowpass_
-                "C#CelloLoopLowpass"
-                (175.0 + (-100.0 * (cos ((wobbleRate time) * rad)))) -- 75.0 orig
-                10.0
-                (loopBuf_ "C#CelloLoop" "low-c#-cello-drone" 1.0 0.5 2.5)
+        ( gain_ "C#DroneMasterFader" 1.0
+            ( ( gainT_' "C#CelloLoopGain"
+                  (epwf [ Tuple 0.0 0.0, Tuple 0.15 1.0, Tuple 10.0 1.0 ] time)
+                  ( lowpass_
+                      "C#CelloLoopLowpass"
+                      (175.0 + (-100.0 * (cos ((wobbleRate time) * rad)))) -- 75.0 orig
+                      10.0
+                      (loopBuf_ "C#CelloLoop" "low-c#-cello-drone" 1.0 0.5 2.5)
+                  )
+              )
+                :| (gain_' "C#BassGain" (1.0 * (bassDroneVol 4.0 time)) (loopBuf_ "C#BassLoop" "bass-c-sharp" 0.5 0.5 2.5))
+                : Nil
             )
         )
   where
@@ -63,7 +78,7 @@ main =
         --, Tuple "flute-c-sharp" "https://freesound.org/data/previews/154/154208_2626346-hq.mp3"
         --, Tuple "pipe-c-sharp" "https://freesound.org/data/previews/345/345192_5622625-hq.mp3"
         --, Tuple "guitar-c-sharp" "https://freesound.org/data/previews/153/153957_2626346-hq.mp3"
-        --, Tuple "bass-c-sharp" "https://media.graphcms.com/iUoLXZ3S5e8uSq647NEd"
+        , Tuple "bass-c-sharp" "https://media.graphcms.com/iUoLXZ3S5e8uSq647NEd"
         --, Tuple "pizz-c-sharp" "https://freesound.org/data/previews/153/153642_2626346-hq.mp3"
         --, Tuple "pizz-e" "https://freesound.org/data/previews/153/153633_2626346-hq.mp3"
         --, Tuple "pizz-g-sharp" "https://freesound.org/data/previews/153/153637_2626346-hq.mp3"
