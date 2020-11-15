@@ -10,6 +10,7 @@ import Foreign.Object as O
 import Math (pi, sin)
 import Type.Klank.Dev (Klank, Buffers, affable, klank)
 
+
 scene :: Number -> Behavior (AudioUnit D1)
 scene time =
   let

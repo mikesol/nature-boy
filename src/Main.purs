@@ -1,4 +1,4 @@
-module Klank.Dev where
+module Klank.NatureBoy where
 
 import Prelude
 import Color (Color, rgb)
@@ -1227,11 +1227,31 @@ main =
         res
           [ "https://klank-share.s3.eu-west-1.amazonaws.com/K16050057737584320.js" -- smoothing amplitude tracker
           ]
+    -- All sounds from freesound.org are used with the CC attribution license.
+    -- For attribution information, see the links of the files themselves, all of which link to information about the file and author.
     , buffers =
       makeBuffersKeepingCache
-        [ Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
+        -- drones
+        [ Tuple "low-g#" "https://freesound.org/data/previews/195/195285_3623377-hq.mp3"
+        -- impros
         , Tuple "flute" "https://media.graphcms.com/eiKfSNIbSaiomCZQzXGA"
-        , Tuple "low-g#" "https://freesound.org/data/previews/195/195285_3623377-hq.mp3"
+        -- foghorns
+        -- low, grave
+        -- , Tuple "distant-low-blast" "https://freesound.org/data/previews/500/500146_401348-lq.mp3"
+        -- nasty, clippy, beautiful
+        -- , Tuple "nasty-rich-low" "https://freesound.org/data/previews/234/234681_1708550-lq.mp3"
+        -- bold, straight
+        -- , Tuple "bold-straight-pvc" "https://freesound.org/data/previews/507/507472_2977885-lq.mp3"
+        -- single low-ish blast
+        -- , Tuple "single-clear-blast" "https://freesound.org/data/previews/81/81874_1285056-lq.mp3"
+        -- higher
+        -- , Tuple "higher-fog-horn" "https://freesound.org/data/previews/92/92911_37876-lq.mp3"
+        --------------------------------
+        -- harmonic rising, glitchy
+        -- , Tuple "rising-harm" "https://freesound.org/data/previews/430/430865_45576-lq.mp3"
+        -- , Tuple "sitar" "https://freesound.org/data/previews/37/37715_347704-hq.mp3"
+        ----------- pads
+        -- , Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
         --, Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-hq.mp3"
         --, Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-hq.mp3"
         --, Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-hq.mp3"
@@ -1245,6 +1265,22 @@ main =
         --, Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-hq.mp3"
         --, Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
         --, Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
+        -- Ambiance
+        --, Tuple "costal-ambiance" "https://freesound.org/data/previews/207/207553_285997-lq.mp3"
+        --, Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-lq.mp3"
+        --, Tuple "robin" "https://freesound.org/data/previews/416/416529_5121236-lq.mp3"
+        ------------- shredders
+        -- second half good... nice and gear-y
+        --, Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-lq.mp3"
+        --, Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-lq.mp3"
+        --, Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-lq.mp3"
+        --, Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-lq.mp3"
+        --, Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-lq.mp3"
+        -------------------- egg timer
+        --, Tuple "egg-timer-wind-plus-ring" "https://freesound.org/data/previews/14/14263_31076-lq.mp3"
+        --, Tuple "egg-timer-ticking" "https://freesound.org/data/previews/468/468081_2247456-lq.mp3"
+        ------------------ gamelan
+        --, Tuple "gamelan-bali" "https://freesound.org/data/previews/257/257625_3932570-lq.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
