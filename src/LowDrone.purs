@@ -9,7 +9,7 @@ import Data.Typelevel.Num (D2)
 import FRP.Behavior (Behavior)
 import FRP.Behavior.Audio (AudioParameter, AudioUnit, decodeAudioDataFromUri, evalPiecewise, gainT_', loopBuf_, lowpass_, playBuf_, runInBrowser, speaker')
 import Foreign.Object as O
-import Math (pi)
+import Math (cos, pi, sin)
 import Type.Klank.Dev (Buffers, Klank, affable, defaultEngineInfo, klank, makeBuffersKeepingCache)
 
 epwf :: Array (Tuple Number Number) -> Number -> AudioParameter
@@ -17,15 +17,24 @@ epwf = evalPiecewise kr
 
 kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
 
+wobbleRate :: Number -> Number
+wobbleRate time
+  | time < 1.0 = 8.0
+  | time < 2.0 = 5.0
+  | time < 3.0 = 11.0
+  | time < 4.0 = 6.0
+  | time < 5.0 = 3.0
+  | otherwise = 0.2
+
 scene :: Number -> Behavior (AudioUnit D2)
 scene time =
   pure
     $ speaker'
         ( gainT_' "C#CelloLoopGain"
-            (epwf [ Tuple 0.0 1.0, Tuple 10.0 1.0 ] time)
+            (epwf [ Tuple 0.0 0.0, Tuple 0.15 1.0, Tuple 10.0 1.0 ] time)
             ( lowpass_
                 "C#CelloLoopLowpass"
-                (75.0)
+                (175.0 + (-100.0 * (cos ((wobbleRate time) * rad)))) -- 75.0 orig
                 10.0
                 (loopBuf_ "C#CelloLoop" "low-c#-cello-drone" 1.0 0.5 2.5)
             )
