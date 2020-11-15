@@ -20,7 +20,7 @@ import Data.String (Pattern(..), indexOf)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Typelevel.Num (D1, D2)
+import Data.Typelevel.Num (class Pos, D1, D2)
 import Data.Vec ((+>), empty)
 import Effect (Effect)
 import Effect.Aff (Aff, Milliseconds(..), delay, try)
@@ -105,7 +105,7 @@ skewedTriangle01 os len = lcmap (_ % len) go
 triangle01 :: Number -> Number -> Number
 triangle01 = skewedTriangle01 0.5
 
-toNel :: List (AudioUnit D2) -> NonEmpty List (AudioUnit D2)
+toNel :: forall s. Semiring s => List s -> NonEmpty List s
 toNel Nil = zero :| Nil
 
 toNel (h : t) = h :| t
