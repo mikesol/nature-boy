@@ -105,7 +105,7 @@ birds =
                 ( playBuf_
                     ("BirdsAboveC#Buf")
                     "beautiful-birds"
-                    1.0 --(min 1.0 (0.95 + (((t % 0.4) / 0.4) * 0.1)))
+                    1.0
                 )
             )
     )
