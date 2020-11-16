@@ -201,7 +201,7 @@ type SigAU
 there0 :: SigAU
 there0 =
   boundByCue There0 There0
-    (\m t -> pure (pmic "Was0Mic"))
+    (\m t -> pure (pmic "There0Mic"))
 
 was0 :: SigAU
 was0 =
@@ -219,6 +219,96 @@ was0 =
                   }
               , generators:
                   { mic: boundByCueNac''' Was0 Was0 (pmic "Was0Mic") m
+                  }
+              }
+    )
+
+showM2n = show <<< m2n :: Marker -> String
+
+veRyVoice :: Marker -> Marker -> Marker -> SigAU
+veRyVoice ve ry far =
+  boundByCue ve far
+    ( \m t ->
+        pure
+          $ graph_ ("Ve3Ry3Graph" <> showM2n ve)
+              { aggregators:
+                  { out: Tuple (g'add_ ("Ve3Ry3Out" <> showM2n ve)) (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ ("Ve3Ry3Combine" <> showM2n ve)) (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ ("Ve3Ry3Gain" <> showM2n ve) 0.7) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ ("Ve3Ry3Delay" <> showM2n ve) 0.4) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' ve ry (pmic ("Ve3Ry3Mic" <> showM2n ve)) m
+                  }
+              }
+    )
+
+farVoice :: Marker -> SigAU
+farVoice far' =
+  boundByCue far' far'
+    ( \m t ->
+        pure
+          $ graph_ ("Far3Graph" <> showM2n far')
+              { aggregators:
+                  { out: Tuple (g'add_ ("Far3Out" <> showM2n far')) (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ ("Far3Combine" <> showM2n far')) (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ ("Far3Gain" <> showM2n far') 0.35) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ ("Far3Delay" <> showM2n far') 0.2) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' far' far' (pmic ("Far3Mic" <> showM2n far')) m
+                  }
+              }
+    )
+
+veRy2 = veRyVoice Ve2 Ry2 Far2 :: SigAU
+
+far2 = farVoice Far2 :: SigAU
+
+veRy3 = veRyVoice Ve3 Ry3 Far3 :: SigAU
+
+far3 = farVoice Far3 :: SigAU
+
+overLandAnd :: SigAU
+overLandAnd =
+  boundByCue O4 Sea4
+    ( \m t ->
+        pure
+          $ graph_ "overLandAndGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "overLandAndOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "overLandAndCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "overLandAndGain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "overLandAndDelay" 0.5) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' O4 And4 (pmic "overLandAndMic") m
+                  }
+              }
+    )
+
+seaVoice :: SigAU
+seaVoice =
+  boundByCue Sea4 Sea4
+    ( \m t ->
+        pure
+          $ graph_ "seaGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "seaOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "seaCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "seaGain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "seaDelay" 0.1) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: pmic "seaMic"
                   }
               }
     )
@@ -276,6 +366,26 @@ boy0 =
           )
     )
 
+boyDupedOnset :: Number -> AudioUnit D2 -> List (AudioUnit D2)
+boyDupedOnset t d =
+  pure
+    ( mul_ "Boy1Mul"
+        ( ( pannerMono_ "Boy1OctavePan" (0.3 * sin (0.8 * pi * t))
+              $ gain_ "Boy1Combined" 1.5
+                  ( (periodicOsc_ "Boy1Octave" "smooth" (conv440 61.0))
+                      :| (periodicOsc_ "Boy1Octavem3" "smooth" (conv440 64.0))
+                      : Nil
+                  )
+          )
+            :| ( audioWorkletProcessor_ "Boy1OctaveGate"
+                  "klank-amplitude"
+                  O.empty
+                  d
+              )
+            : Nil
+        )
+    )
+
 boy1 :: SigAU
 boy1 =
   boundByCue_ Boy1 Boy1
@@ -284,32 +394,37 @@ boy1 =
           ( pure
               $ dup2
                   (pmic "Boy1Mic") \d ->
-                  -- adds a small octave descant
-                  ( gain_ "Boy1Comb" 1.0
-                      ( d
-                          :| ( maybe Nil
-                                ( \onset ->
-                                    pure
-                                      ( gain_' "Boy1RampUpOsc" 3.5
-                                          $ mul_ "Boy1Mul"
-                                              ( ( pannerMono_ "Boy1OctavePan" (0.3 * sin (0.8 * pi * t))
-                                                    $ periodicOsc_ "Boy1Octave" "smooth" (conv440 61.0)
-                                                )
-                                                  :| ( audioWorkletProcessor_ "Boy1OctaveGate"
-                                                        "klank-amplitude"
-                                                        O.empty
-                                                        d
-                                                    )
-                                                  : Nil
-                                              )
-                                      )
-                                )
-                                (M.lookup m ac.markerOnsets)
-                            )
-                      )
-                  )
+                  (gain_ "Boy1Comb" 1.0 (d :| (boyDupedOnset t d)))
           )
     )
+
+they2 :: SigAU
+they2 =
+  boundByCueWithOnset They2 Dered2
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure
+            $ graph_ "They2Graph"
+                { aggregators:
+                    { out: Tuple (g'add_ "They2Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                    , combine: Tuple (g'add_ "They2Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                    , gain: Tuple (g'gain_ "They2Gain" (min 0.7 $ 2.0 * time)) (SLProxy :: SLProxy ("del" :/ SNil))
+                    }
+                , processors:
+                    { del: Tuple (g'delay_ "They2Delay" 0.5) (SProxy :: SProxy "combine")
+                    }
+                , generators:
+                    { mic: boundByCueNac''' They2 They2 (pmic "They2Mic") m
+                    }
+                }
+    )
+
+sayHeWandered :: SigAU
+sayHeWandered =
+  boundByCue Say2 Dered2
+    (\m t -> pure (pmic "SayHeWanderedMic"))
 
 a1 :: SigAU
 a1 =
@@ -328,6 +443,32 @@ singleLowGSharpCello s time =
       )
   )
 
+theyGong :: SigAU
+theyGong = boundByCueWithOnset They2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.5 $ boundPlayer 100.0 (const $ pure (playBuf_ ("They2GongPlayer") "kettle-g-sharp-3" 1.0))) time
+
+sayGong :: SigAU
+sayGong = boundByCueWithOnset Say2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.4 $ boundPlayer 100.0 (const $ pure (playBuf_ ("Say2GongPlayer") "kettle-a-3" 1.0))) time
+
+heGong :: SigAU
+heGong = boundByCueWithOnset He2 Dered2 \ac onset m t -> let time = t - onset in (atT 0.4 $ boundPlayer 100.0 (const $ pure (playBuf_ ("He2GongPlayer") "kettle-c-4" 1.0))) time
+
+wanGong :: SigAU
+wanGong = boundByCueWithOnset Wan2 Ve3 \ac onset m t -> let time = t - onset in (atT 0.3 $ boundPlayer 100.0 (const $ pure (playBuf_ ("Wan2GongPlayer") "kettle-e-flat-4" 1.0))) time
+
+deredGong :: SigAU
+deredGong = boundByCueWithOnset Dered2 Ry3 \ac onset m t -> let time = t - onset in (atT 0.2 $ boundPlayer 100.0 (const $ pure (playBuf_ ("Dered2GongPlayer") "kettle-f-sharp-4" 1.0))) time
+
+theySayHeWanderedCymbal :: SigAU
+theySayHeWanderedCymbal =
+  boundByCue They2 Dered2
+    ( \m n ->
+        pure
+          $ gain_'
+              "TheySayHeWanderedCymbal"
+              1.0
+              (playBuf_ "TheySayHeWanderedCymbal" "revcym" 1.0)
+    )
+
 boundLowGSharpCello :: String -> Number -> List (AudioUnit D2)
 boundLowGSharpCello s = boundPlayer 3.1 (map pure (singleLowGSharpCello s))
 
@@ -342,6 +483,10 @@ celloLowGSharpRack time =
         , atT 7.5 $ boundLowGSharpCello "d"
         , atT 10.0 $ boundLowGSharpCello "e"
         , atT 12.5 $ boundLowGSharpCello "f"
+        , atT 15.0 $ boundLowGSharpCello "g"
+        , atT 17.5 $ boundLowGSharpCello "h"
+        , atT 20.0 $ boundLowGSharpCello "i"
+        , atT 22.5 $ boundLowGSharpCello "j"
         ]
     )
 
@@ -362,7 +507,7 @@ celloVeryStrangeEnchantedDrone =
                     -- fade out if > Chan1
                     ( maybe
                         1.0
-                        (\chan -> max 0.0 (1.0 - ((t - chan) * 0.5)))
+                        (\chan -> max 0.0 (1.0 - ((t - chan) * 0.2)))
                         (M.lookup Chan1 ac.markerOnsets)
                     )
                 )
@@ -372,7 +517,7 @@ celloVeryStrangeEnchantedDrone =
 
 veRyStrangeEn :: SigAU
 veRyStrangeEn =
-  boundByCueWithOnset Ve1 En1
+  boundByCueWithOnset Ve1 Boy1
     ( \ac onset m t ->
         graph_ "VeRyStrangeEnGraph"
           { aggregators:
@@ -390,9 +535,9 @@ veRyStrangeEn =
           : Nil
     )
 
-chan1 :: SigAU
-chan1 =
-  boundByCue Chan1 Chan1
+chanTed :: SigAU
+chanTed =
+  boundByCue Chan1 Boy1
     ( \m t ->
         pure
           $ graph_ "Chan1Graph"
@@ -405,15 +550,10 @@ chan1 =
                   { del: Tuple (g'delay_ "Chan1Delay" 0.25) (SProxy :: SProxy "combine")
                   }
               , generators:
-                  { mic: boundByCueNac''' Chan1 Chan1 (pmic "Chan1Mic") m
+                  { mic: boundByCueNac''' Chan1 Ted1 (pmic "Chan1Mic") m
                   }
               }
     )
-
-ted :: SigAU
-ted =
-  boundByCue Ted1 Ted1
-    (\m t -> pure (pmic "TedMic"))
 
 veryFarDrones :: SigAU
 veryFarDrones =
@@ -632,8 +772,7 @@ compVeryStrangeEnchantedBoy Chan1 = t1c440 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
 
 compVeryStrangeEnchantedBoy Ted1 = t1c440 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
 
-compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
-
+-- compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
 compVeryStrangeEnchantedBoy _ = Nil
 
 simpleOsc :: (String -> Number -> AudioUnit D1) -> String -> List (Tuple Number Number) -> AudioUnit D2
@@ -680,7 +819,7 @@ data Marker
   | Ve3
   | Ry3
   | Far3
-  | O3
+  | O4
   | Ver4
   | Land4
   | And4
@@ -793,7 +932,7 @@ m2n Ry3 = 21.000000
 
 m2n Far3 = 22.000000
 
-m2n O3 = 23.000000
+m2n O4 = 23.000000
 
 m2n Ver4 = 24.000000
 
@@ -970,7 +1109,7 @@ m2s Ry3 = "-ry"
 
 m2s Far3 = "far..."
 
-m2s O3 = "O-"
+m2s O4 = "O-"
 
 m2s Ver4 = "-ver"
 
@@ -1257,7 +1396,7 @@ screen2markerAccf screen =
     [ Ve3
     , Ry3
     , Far3
-    , O3
+    , O4
     , Ver4
     , Land4
     , And4
@@ -1468,16 +1607,29 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , celloVeryStrangeEnchantedDrone
               , veryStrangeEnchantedBoyComp
               , veRyStrangeEn
-              , chan1
-              , ted
+              , chanTed
               , boy1
+              , they2
+              , sayHeWandered
+              , theySayHeWanderedCymbal
+              , theyGong
+              , sayGong
+              , heGong
+              , wanGong
+              , deredGong
+              , veRy2
+              , far2
               , veryFarDrones
               , ryGongBackwards
               , farChimes
               , farShriek
               , farBirds
+              , veRy3
+              , far3
               , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
               , guitarSingleton "b" "e-guitar" 0.3 Ry3
+              , overLandAnd
+              , seaVoice
               ]
         )
         acc.currentMarker
@@ -1514,6 +1666,16 @@ main =
         [ Tuple "low-g#" "https://freesound.org/data/previews/195/195285_3623377-hq.mp3"
         -- impros
         , Tuple "flute" "https://media.graphcms.com/eiKfSNIbSaiomCZQzXGA"
+        -- siren
+        , Tuple "siren" "https://freesound.org/data/previews/534/534550_11837619-hq.mp3"
+        -- revcym
+        , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
+        -- gamelan
+        , Tuple "kettle-g-sharp-3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleGSharp3.ogg"
+        , Tuple "kettle-a-3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleA3.ogg"
+        , Tuple "kettle-c-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleC4.ogg"
+        , Tuple "kettle-e-flat-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleEFlat4.ogg"
+        , Tuple "kettle-f-sharp-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleFSharp4.ogg"
         -- foghorns
         -- low, grave
         -- , Tuple "distant-low-blast" "https://freesound.org/data/previews/500/500146_401348-lq.mp3"

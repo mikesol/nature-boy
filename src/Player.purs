@@ -22,7 +22,7 @@ buffers ctx _ =
   affable
     $ sequence
         ( O.singleton "scratch"
-            $ toAffE (decodeAudioDataFromUri ctx "https://media.graphcms.com/iUoLXZ3S5e8uSq647NEd")
+            $ toAffE (decodeAudioDataFromUri ctx "https://media.graphcms.com/IVPxpWmLSpmVo1c0kC5g")
         )
 
 main :: Klank

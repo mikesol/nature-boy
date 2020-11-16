@@ -75,22 +75,6 @@ bassDroneVol time
   | time < 5.6 = triangle01 1.0 (time - 4.6)
   | otherwise = triangle01 4.0 (time - 5.6)
 
-gongBackwards2Atomic :: String -> Number -> Number -> List (AudioUnit D1)
-gongBackwards2Atomic tag len =
-  boundPlayer (len + 0.1)
-    ( \t ->
-        pure
-          $ ( gainT_' ("GongBwAboveC#Gain" <> tag)
-                (epwf [ Tuple 0.0 0.0, Tuple 0.1 1.0, Tuple (len - 0.2) 1.0, Tuple (len - 0.1) 0.05, Tuple len 0.0 ] t)
-                ( playBufWithOffset_
-                    ("GongBwAboveC#Buf" <> tag)
-                    "gong-g-sharp-reversed"
-                    1.0 --(min 1.0 (0.95 + (((t % 0.4) / 0.4) * 0.1)))
-                    (6.7 - len)
-                )
-            )
-    )
-
 birds :: Number -> List (AudioUnit D2)
 birds =
   boundPlayer (20.0)
@@ -180,6 +164,22 @@ shriek =
                             )
                         }
                     }
+                )
+            )
+    )
+
+gongBackwards2Atomic :: String -> Number -> Number -> List (AudioUnit D1)
+gongBackwards2Atomic tag len =
+  boundPlayer (len + 0.1)
+    ( \t ->
+        pure
+          $ ( gainT_' ("GongBwAboveC#Gain" <> tag)
+                (epwf [ Tuple 0.0 0.0, Tuple 0.1 1.0, Tuple (len - 0.2) 1.0, Tuple (len - 0.1) 0.05, Tuple len 0.0 ] t)
+                ( playBufWithOffset_
+                    ("GongBwAboveC#Buf" <> tag)
+                    "gong-g-sharp-reversed"
+                    1.0 --(min 1.0 (0.95 + (((t % 0.4) / 0.4) * 0.1)))
+                    (6.7 - len)
                 )
             )
     )
