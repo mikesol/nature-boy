@@ -20,20 +20,20 @@ import Data.String (Pattern(..), indexOf)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Typelevel.Num (class Pos, D1, D2)
+import Data.Typelevel.Num (D1, D2)
 import Data.Vec ((+>), empty)
 import Effect (Effect)
 import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, gainT_', gain_, gain_', graph_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
 import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
-import Math (pi, pow, sin, (%))
+import Math (cos, pi, pow, sin, (%))
 import Record.Extra (SLProxy(..), SNil)
 import Type.Data.Graph (type (:/))
 import Type.Klank.Dev (Klank', affable, defaultEngineInfo, klank)
@@ -58,6 +58,18 @@ import Web.UIEvent.MouseEvent as ME
 -- And then one day starts to have sawtooth delay
 boundByCue_ :: forall acc a. Monoid a => Marker -> Marker -> (acc -> Marker -> Number -> Tuple acc a) -> acc -> Marker -> Number -> Tuple acc a
 boundByCue_ st ed f ac m n = if m >= st && m <= ed then f ac m n else Tuple ac mempty
+
+boundByCueWithOnset :: forall a. Monoid a => Marker -> Marker -> (NatureBoyAccumulator -> Number -> Marker -> Number -> a) -> NatureBoyAccumulator -> Marker -> Number -> Tuple NatureBoyAccumulator a
+boundByCueWithOnset st ed f =
+  boundByCue_ st ed
+    ( \ac m t ->
+        Tuple ac
+          ( maybe
+              mempty
+              (\onset -> f ac onset m t)
+              (M.lookup st ac.markerOnsets)
+          )
+    )
 
 boundByCue :: forall acc a. Monoid a => Marker -> Marker -> (Marker -> Number -> a) -> acc -> Marker -> Number -> Tuple acc a
 boundByCue st ed f = boundByCue_ st ed (\a m n -> Tuple a $ f m n)
@@ -104,6 +116,31 @@ skewedTriangle01 os len = lcmap (_ % len) go
 
 triangle01 :: Number -> Number -> Number
 triangle01 = skewedTriangle01 0.5
+
+--------------------------------------------
+---------
+wobbleRate :: Number -> Number
+wobbleRate time
+  | time < 1.0 = 8.0
+  | time < 2.0 = 5.0
+  | time < 3.0 = 11.0
+  | time < 4.0 = 6.0
+  | time < 5.0 = 3.0
+  ---
+  | time < 5.6 = 9.0
+  | time < 6.1 = 5.0
+  | time < 7.0 = 3.0
+  | time < 8.0 = 2.0
+  | time < 9.0 = 1.0
+  ---
+  | otherwise = 0.2
+
+bassDroneVol :: Number -> Number
+bassDroneVol time
+  | time < 2.7 = triangle01 4.0 (time - 0.0)
+  | time < 4.6 = triangle01 0.4 (time - 2.7)
+  | time < 5.6 = triangle01 1.0 (time - 4.6)
+  | otherwise = triangle01 4.0 (time - 5.6)
 
 toNel :: forall s. Semiring s => List s -> NonEmpty List s
 toNel Nil = zero :| Nil
@@ -239,6 +276,41 @@ boy0 =
           )
     )
 
+boy1 :: SigAU
+boy1 =
+  boundByCue_ Boy1 Boy1
+    ( \ac m t ->
+        Tuple ac
+          ( pure
+              $ dup2
+                  (pmic "Boy1Mic") \d ->
+                  -- adds a small octave descant
+                  ( gain_ "Boy1Comb" 1.0
+                      ( d
+                          :| ( maybe Nil
+                                ( \onset ->
+                                    pure
+                                      ( gain_' "Boy1RampUpOsc" 3.5
+                                          $ mul_ "Boy1Mul"
+                                              ( ( pannerMono_ "Boy1OctavePan" (0.3 * sin (0.8 * pi * t))
+                                                    $ periodicOsc_ "Boy1Octave" "smooth" (conv440 61.0)
+                                                )
+                                                  :| ( audioWorkletProcessor_ "Boy1OctaveGate"
+                                                        "klank-amplitude"
+                                                        O.empty
+                                                        d
+                                                    )
+                                                  : Nil
+                                              )
+                                      )
+                                )
+                                (M.lookup m ac.markerOnsets)
+                            )
+                      )
+                  )
+          )
+    )
+
 a1 :: SigAU
 a1 =
   boundByCue A1 A1
@@ -275,61 +347,47 @@ celloLowGSharpRack time =
 
 celloVeryStrangeEnchantedDrone :: SigAU
 celloVeryStrangeEnchantedDrone =
-  boundByCue_ A1 Boy1
-    ( \ac m t ->
-        ( maybe
-            (Tuple ac Nil)
-            ( \onset ->
-                let
-                  now = t - onset
-                in
-                  Tuple ac
-                    $ ( pure
-                          ( gain_
-                              "CelloFadeInOut"
-                              ( if m < Chan1 then
-                                  -- fade in if below <= En1
-                                  (min (now * 0.5) 1.0)
-                                else
-                                  -- fade out if > Chan1
-                                  ( maybe
-                                      1.0
-                                      (\chan -> max 0.0 (1.0 - ((t - chan) * 0.5)))
-                                      (M.lookup Chan1 ac.markerOnsets)
-                                  )
-                              )
-                              (toNel (celloLowGSharpRack now))
-                          )
-                      )
+  boundByCueWithOnset A1 Boy1
+    ( \ac onset m t ->
+        let
+          now = t - onset
+        in
+          pure
+            ( gain_
+                "CelloFadeInOut"
+                ( if m < Chan1 then
+                    -- fade in if below <= En1
+                    (min (now * 0.5) 1.0)
+                  else
+                    -- fade out if > Chan1
+                    ( maybe
+                        1.0
+                        (\chan -> max 0.0 (1.0 - ((t - chan) * 0.5)))
+                        (M.lookup Chan1 ac.markerOnsets)
+                    )
+                )
+                (toNel (celloLowGSharpRack now))
             )
-            (M.lookup A1 ac.markerOnsets)
-        )
     )
 
 veRyStrangeEn :: SigAU
 veRyStrangeEn =
-  boundByCue_ Ve1 En1
-    ( \ac m t ->
-        ( maybe (Tuple ac Nil)
-            ( \onset ->
-                Tuple ac
-                  $ graph_ "VeRyStrangeEnGraph"
-                      { aggregators:
-                          { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
-                          , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                          , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.7 (0.7 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
-                          }
-                      , processors:
-                          { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.2) (SProxy :: SProxy "combine")
-                          }
-                      , generators:
-                          { mic: boundByCueNac''' Ve1 En1 (pmic "VeRyStrangeEnMic") m
-                          }
-                      }
-                  : Nil
-            )
-            (M.lookup Ve1 ac.markerOnsets)
-        )
+  boundByCueWithOnset Ve1 En1
+    ( \ac onset m t ->
+        graph_ "VeRyStrangeEnGraph"
+          { aggregators:
+              { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+              , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.7 (0.7 * 0.5 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
+              }
+          , processors:
+              { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.2) (SProxy :: SProxy "combine")
+              }
+          , generators:
+              { mic: boundByCueNac''' Ve1 En1 (pmic "VeRyStrangeEnMic") m
+              }
+          }
+          : Nil
     )
 
 chan1 :: SigAU
@@ -352,10 +410,213 @@ chan1 =
               }
     )
 
-tedBoy :: SigAU
-tedBoy =
-  boundByCue There0 There0
-    (\m t -> pure (pmic "TedBoyMic"))
+ted :: SigAU
+ted =
+  boundByCue Ted1 Ted1
+    (\m t -> pure (pmic "TedMic"))
+
+veryFarDrones :: SigAU
+veryFarDrones =
+  boundByCueWithOnset Ve2 And4
+    ( \ac onset m t ->
+        let
+          time = t - onset
+
+          rad = time * pi
+        in
+          ( gainT_' "C#CelloLoopGain"
+              (epwf [ Tuple 0.0 0.0, Tuple 0.15 0.8, Tuple 10.0 0.8 ] time)
+              ( lowpass_
+                  "C#CelloLoopLowpass"
+                  (175.0 + (-100.0 * (cos ((wobbleRate time) * rad)))) -- 75.0 orig
+                  10.0
+                  (loopBuf_ "C#CelloLoop" "low-c#-cello-drone" 1.0 0.5 2.5)
+              )
+          )
+            : ( pannerMono_
+                  "C#BassPan"
+                  (2.0 * (skewedTriangle01 (0.94 - (min 0.44 (time * 0.1))) 2.0 time) - 1.0)
+                  (gain_' "C#BassGain" (1.0 * (bassDroneVol time)) (loopBuf_ "C#BassLoop" "bass-c-sharp" 0.5 0.0 4.3))
+              )
+            : Nil
+    )
+
+farChimes :: SigAU
+farChimes =
+  boundByCueWithOnset Far2 And4
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure
+            $ graph_
+                "ChimezGrpah"
+                { aggregators:
+                    { out: Tuple (g'add_ "ChimezOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                    , combine: Tuple (g'add_ "ChimezCombine") (SLProxy :: SLProxy ("gain" :/ "chimez" :/ SNil))
+                    , gain: Tuple (g'gain_ "ChimezGraphGain" 0.17) (SLProxy :: SLProxy ("del" :/ SNil))
+                    }
+                , processors:
+                    { del: Tuple (g'delay_ "ChimezGraphDelay" 0.21) (SProxy :: SProxy "hpf")
+                    , hpf: Tuple (g'highpass_ "ChimezGraphHpf" 4000.0 14.0) (SProxy :: SProxy "combine")
+                    }
+                , generators:
+                    { chimez:
+                        ( gain_' "ChimezAboveC#Gain"
+                            (max 0.0 (0.5 - (time * 0.05)))
+                            ( highpass_ "ChimezAboveC#HP" 3000.0 5.0
+                                ( loopBuf_
+                                    "ChimezAboveC#Buf"
+                                    "chimez-above-c-sharp-drone"
+                                    1.0
+                                    0.0
+                                    0.0
+                                )
+                            )
+                        )
+                    }
+                }
+    )
+
+gongBackwards2Atomic :: String -> Number -> Number -> List (AudioUnit D1)
+gongBackwards2Atomic tag len =
+  boundPlayer (len + 0.1)
+    ( \t ->
+        pure
+          $ ( gainT_' ("GongBwAboveC#Gain" <> tag)
+                (epwf [ Tuple 0.0 0.0, Tuple 0.1 1.0, Tuple (len - 0.2) 1.0, Tuple (len - 0.1) 0.05, Tuple len 0.0 ] t)
+                ( playBufWithOffset_
+                    ("GongBwAboveC#Buf" <> tag)
+                    "gong-g-sharp-reversed"
+                    1.0 --(min 1.0 (0.95 + (((t % 0.4) / 0.4) * 0.1)))
+                    (6.7 - len)
+                )
+            )
+    )
+
+gongBackwards2 :: Array (Number -> List (AudioUnit D1))
+gongBackwards2 = (foldl (\{ acc, t } a -> { acc: [ atT t $ gongBackwards2Atomic (show t) a ] <> acc, t: t + a }) { acc: [], t: 0.0 } [ 0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 1.0, 1.0, 0.7, 0.4, 0.4, 0.4, 1.4, 0.5, 0.5, 0.7, 0.7, 1.0, 1.0 ]).acc
+
+ryGongBackwards :: SigAU
+ryGongBackwards =
+  boundByCueWithOnset Ry2 And4
+    ( \ac onset m t' ->
+        let
+          t = t' - onset
+        in
+          pure
+            $ pannerMono_ "GongAboveC#Pan" (2.0 * (skewedTriangle01 0.8 2.0 t) - 1.0)
+                ( gain_ "GongBwAboveC#Gain"
+                    (4.0 * (skewedTriangle01 0.2 10.0 t))
+                    (toNel $ fold (map (\f -> f t) gongBackwards2))
+                )
+    )
+
+farShriek :: SigAU
+farShriek =
+  boundByCueWithOnset Far2 And4
+    ( \ac onset m t' ->
+        let
+          t = t' - onset
+        in
+          pure
+            $ ( gain_' ("AirRaidSirenAboveC#Gain")
+                  (0.3)
+                  ( graph_
+                      "AirRaidGrpah"
+                      { aggregators:
+                          { out: Tuple (g'add_ "AirRaidOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                          , combine: Tuple (g'add_ "AirRaidCombine") (SLProxy :: SLProxy ("gain" :/ "chimez" :/ SNil))
+                          , gain: Tuple (g'gain_ "AirRaidGraphGain" 0.5) (SLProxy :: SLProxy ("del" :/ SNil))
+                          }
+                      , processors:
+                          { del: Tuple (g'delay_ "AirRaidGraphDelay" 0.4) (SProxy :: SProxy "combine")
+                          }
+                      , generators:
+                          { chimez:
+                              ( if t < 4.0 then
+                                  ( gainT_' "AirRaidSirenCarveGian"
+                                      ( epwf
+                                          [ Tuple 0.0 1.0
+                                          , Tuple 0.2 1.0
+                                          , Tuple 0.3 0.2
+                                          , Tuple 0.5 0.7
+                                          , Tuple 1.4 0.7
+                                          , Tuple 1.5 0.1
+                                          , Tuple 1.6 0.7
+                                          , Tuple 1.7 0.1
+                                          , Tuple 1.8 0.7
+                                          , Tuple 1.9 0.1
+                                          , Tuple 2.0 0.7
+                                          , Tuple 2.1 0.1
+                                          , Tuple 2.2 0.7
+                                          , Tuple 2.3 0.1
+                                          , Tuple 2.4 0.6
+                                          , Tuple 2.5 0.1
+                                          , Tuple 2.6 0.5
+                                          , Tuple 2.7 0.1
+                                          , Tuple 2.8 0.4
+                                          , Tuple 2.9 0.1
+                                          , Tuple 3.0 0.3
+                                          , Tuple 3.1 0.1
+                                          , Tuple 3.2 0.2
+                                          , Tuple 3.3 0.1
+                                          ]
+                                          t
+                                      )
+                                      $ playBuf_
+                                          ("AirRaidSirenAboveC#Buf")
+                                          "terrifying-air-raid-siren"
+                                          1.0
+                                  )
+                                else
+                                  zero
+                              )
+                          }
+                      }
+                  )
+              )
+    )
+
+farBirds :: SigAU
+farBirds =
+  boundByCueWithOnset Far2 And4
+    ( \ac onset m t' ->
+        let
+          time = t' - onset - 1.0 -- delay by one secod
+        in
+          boundPlayer (20.0)
+            ( \t ->
+                pure
+                  $ ( gain_' ("BirdsAboveC#Gain")
+                        (0.3 * (skewedTriangle01 0.5 10.0 t))
+                        ( playBuf_
+                            ("BirdsAboveC#Buf")
+                            "beautiful-birds"
+                            1.0
+                        )
+                    )
+            )
+            time
+    )
+
+guitarSingleton :: String -> String -> Number -> Marker -> SigAU
+guitarSingleton tag name gain st =
+  boundByCueWithOnset st Far3
+    ( \ac onset m t' ->
+        let
+          t = t' - onset
+        in
+          pure
+            $ ( gain_' ("GuitarGain" <> tag <> name)
+                  (gain)
+                  ( playBuf_
+                      ("GuitarBuf" <> tag <> name)
+                      name
+                      1.0
+                  )
+              )
+    )
 
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
@@ -1208,7 +1469,15 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , veryStrangeEnchantedBoyComp
               , veRyStrangeEn
               , chan1
-              , tedBoy
+              , ted
+              , boy1
+              , veryFarDrones
+              , ryGongBackwards
+              , farChimes
+              , farShriek
+              , farBirds
+              , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
+              , guitarSingleton "b" "e-guitar" 0.3 Ry3
               ]
         )
         acc.currentMarker
@@ -1291,6 +1560,36 @@ main =
         --, Tuple "egg-timer-ticking" "https://freesound.org/data/previews/468/468081_2247456-lq.mp3"
         ------------------ gamelan
         --, Tuple "gamelan-bali" "https://freesound.org/data/previews/257/257625_3932570-lq.mp3"
+        , Tuple "low-c#-cello-drone" "https://freesound.org/data/previews/195/195278_3623377-hq.mp3"
+        --, Tuple "handbell-c#" "https://freesound.org/data/previews/339/339808_5121236-hq.mp3"
+        --, Tuple "guitar-8th-c#" "https://freesound.org/data/previews/372/372386_5968459-hq.mp3"
+        --, Tuple "accordion-c#-aug" "https://freesound.org/data/previews/120/120692_649468-hq.mp3"
+        --, Tuple "spoooooky-amb" "https://freesound.org/data/previews/277/277572_5338846-hq.mp3"
+        -- rate 1.09 gets to C#
+        --, Tuple "scary-c" "https://freesound.org/data/previews/277/277637_5338846-hq.mp3"
+        -- , Tuple "gong-g-sharp" "https://media.graphcms.com/LFgrdeImQICudFzE1ShR"
+        , Tuple "gong-g-sharp-reversed" "https://media.graphcms.com/pYrQiqMAT62OoVYQugg4"
+        --, Tuple "power-chord-c-sharp" "https://freesound.org/data/previews/49/49275_177850-hq.mp3"
+        --, Tuple "bassoon-c-sharp" "https://freesound.org/data/previews/154/154330_2626346-hq.mp3"
+        --, Tuple "loud-awful-scream" "https://freesound.org/data/previews/267/267395_5004228-hq.mp3"
+        --, Tuple "real-human-scream" "https://freesound.org/data/previews/536/536486_11937282-hq.mp3"
+        --, Tuple "flute-c-sharp" "https://freesound.org/data/previews/154/154208_2626346-hq.mp3"
+        --, Tuple "pipe-c-sharp" "https://freesound.org/data/previews/345/345192_5622625-hq.mp3"
+        -- , Tuple "guitar-c-sharp" "https://freesound.org/data/previews/153/153957_2626346-hq.mp3"
+        , Tuple "bass-c-sharp" "https://media.graphcms.com/0gp37YI7Q5mczsjAUiUH"
+        --, Tuple "pizz-c-sharp" "https://freesound.org/data/previews/153/153642_2626346-hq.mp3"
+        --, Tuple "pizz-e" "https://freesound.org/data/previews/153/153633_2626346-hq.mp3"
+        --, Tuple "pizz-g-sharp" "https://freesound.org/data/previews/153/153637_2626346-hq.mp3"
+        --, Tuple "bass-pizz-c-sharp" "https://freesound.org/data/previews/153/153805_2626346-hq.mp3"
+        --, Tuple "guitar-high-c-sharp" "https://freesound.org/data/previews/153/153944_2626346-hq.mp3"
+        --, Tuple "voice-like-c-sharp" "https://freesound.org/data/previews/315/315850_4557960-hq.mp3"
+        , Tuple "terrifying-air-raid-siren" "https://freesound.org/data/previews/271/271132_5004228-hq.mp3"
+        --, Tuple "shruti-box" "https://media.graphcms.com/qwlr3QDKQHmrLjD9smOY"
+        , Tuple "chimez-above-c-sharp-drone" "https://media.graphcms.com/3Z0DXRxRtOTymo51DGev"
+        , Tuple "middle-g-sharp-guitar" "https://freesound.org/data/previews/154/154013_2626346-hq.mp3"
+        , Tuple "high-g-sharp-guitar" "https://freesound.org/data/previews/153/153984_2626346-hq.mp3"
+        , Tuple "e-guitar" "https://freesound.org/data/previews/153/153980_2626346-hq.mp3"
+        , Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-lq.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do

@@ -1,29 +1,22 @@
-module Klank.Cello where
+module Klank.LowDrone where
 
 import Prelude
-import Control.Promise (toAffE)
-import Data.Array (filter)
-import Data.Either (either)
 import Data.Foldable (fold, foldl)
 import Data.Int (toNumber)
-import Data.Lens (_2, over)
 import Data.List (List(..), (:))
-import Data.NonEmpty (NonEmpty(..), (:|))
+import Data.NonEmpty (NonEmpty, (:|))
 import Data.Profunctor (lcmap)
 import Data.Symbol (SProxy(..))
-import Data.Traversable (sequence)
-import Data.Tuple (Tuple(..), fst)
+import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (class Pos, D1, D2)
-import Effect (Effect)
-import Effect.Aff (Aff, Milliseconds(..), delay, parallel, sequential, try)
-import Effect.Exception (Error)
+import Data.Vec ((+>), empty)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, decodeAudioDataFromUri, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, pannerMono_, panner_, playBufWithOffsetT_, playBufWithOffset_, playBuf_, runInBrowser, speaker')
+import FRP.Behavior.Audio (AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, decodeAudioDataFromUri, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, pannerMono_, panner_, periodicOsc_, playBufWithOffsetT_, playBufWithOffset_, playBuf_, runInBrowser, speaker')
 import Foreign.Object as O
-import Math (cos, pi, sin, (%))
+import Math (cos, pi, pow, sin, (%))
 import Record.Extra (SLProxy(..), SNil)
 import Type.Data.Graph (type (:/))
-import Type.Klank.Dev (Buffers, Klank, makeBuffersKeepingCache, affable, defaultEngineInfo, klank)
+import Type.Klank.Dev (Klank, makeBuffersKeepingCache, defaultEngineInfo, klank)
 
 atT :: forall a. Number -> (Number -> a) -> (Number -> a)
 atT t = lcmap (_ - t)
@@ -36,6 +29,9 @@ boundPlayer len a time = if (time) + kr >= 0.0 && time < (len) then a time else 
 
 epwf :: Array (Tuple Number Number) -> Number -> AudioParameter
 epwf = evalPiecewise kr
+
+conv440 :: Number -> Number
+conv440 i = 440.0 * (2.0 `pow` ((i - 69.0) / 12.0))
 
 kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
 
@@ -105,6 +101,21 @@ birds =
                 ( playBuf_
                     ("BirdsAboveC#Buf")
                     "beautiful-birds"
+                    1.0
+                )
+            )
+    )
+
+guitarSingleton :: String -> String -> Number -> Number -> List (AudioUnit D2)
+guitarSingleton tag name gain =
+  boundPlayer (20.0)
+    ( \t ->
+        pure
+          $ ( gain_' ("GuitarGain" <> tag <> name)
+                (gain)
+                ( playBuf_
+                    ("GuitarBuf" <> tag <> name)
+                    name
                     1.0
                 )
             )
@@ -222,6 +233,24 @@ chimez =
               }
     )
 
+synth :: Number -> List (AudioUnit D2)
+synth =
+  boundPlayer 20.0 \time ->
+    let
+      rad = pi * time
+    in
+      pure
+        ( gain_ "SynthGain" (if time < 2.0 then time * 0.5 else 1.0)
+            ( ( pannerMono_ "TonalDotsPan" (sin rad)
+                  (gain_' "TonalDotsGain" (0.1 * (triangle01 0.35 time)) (periodicOsc_ "TonalDotsOsc" "smooth" (conv440 (68.0))))
+              )
+                :| ( pannerMono_ "TonalDotsPan" (cos rad)
+                      (gain_' "TonalDotsGain" (0.08 * (triangle01 0.35 time)) (periodicOsc_ "TonalDotsOsc" "smooth" (conv440 (66.0))))
+                  )
+                : Nil
+            )
+        )
+
 scene :: Number -> Behavior (AudioUnit D2)
 scene time =
   pure
@@ -249,6 +278,9 @@ scene time =
                                     , atT 2.0 gongBackwards
                                     , atT 4.0 birds
                                     , atT 3.0 shriek
+                                    , atT 5.2 (guitarSingleton "a" "middle-g-sharp-guitar" 0.5)
+                                    , atT 6.7 (guitarSingleton "b" "e-guitar" 0.3)
+                                    , atT 9.0 synth
                                     ]
                                   )
                               )
@@ -280,7 +312,7 @@ main =
         --, Tuple "real-human-scream" "https://freesound.org/data/previews/536/536486_11937282-hq.mp3"
         --, Tuple "flute-c-sharp" "https://freesound.org/data/previews/154/154208_2626346-hq.mp3"
         --, Tuple "pipe-c-sharp" "https://freesound.org/data/previews/345/345192_5622625-hq.mp3"
-        --, Tuple "guitar-c-sharp" "https://freesound.org/data/previews/153/153957_2626346-hq.mp3"
+        -- , Tuple "guitar-c-sharp" "https://freesound.org/data/previews/153/153957_2626346-hq.mp3"
         , Tuple "bass-c-sharp" "https://media.graphcms.com/0gp37YI7Q5mczsjAUiUH"
         --, Tuple "pizz-c-sharp" "https://freesound.org/data/previews/153/153642_2626346-hq.mp3"
         --, Tuple "pizz-e" "https://freesound.org/data/previews/153/153633_2626346-hq.mp3"
@@ -296,4 +328,15 @@ main =
         , Tuple "e-guitar" "https://freesound.org/data/previews/153/153980_2626346-hq.mp3"
         , Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-lq.mp3"
         ]
+    , periodicWaves =
+      \ctx _ res rej -> do
+        smooth <-
+          makePeriodicWave ctx
+            (0.5 +> 0.25 +> -0.1 +> 0.07 +> 0.1 +> empty)
+            (0.2 +> 0.1 +> 0.01 +> -0.03 +> -0.1 +> empty)
+        rich <-
+          makePeriodicWave ctx
+            (0.1 +> 0.3 +> -0.1 +> 0.1 +> 0.2 +> 0.05 +> 0.1 +> 0.01 +> empty)
+            (0.3 +> -0.5 +> -0.4 +> -0.03 +> -0.15 +> -0.2 +> -0.05 +> -0.02 +> empty)
+        res $ O.fromFoldable [ Tuple "smooth" smooth, Tuple "rich" rich ]
     }
