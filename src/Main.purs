@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -777,7 +777,7 @@ veryFarDrones =
           rad = time * pi
         in
           ( gainT_' "C#CelloLoopGain"
-              (epwf [ Tuple 0.0 0.0, Tuple 0.15 0.8, Tuple 10.0 0.8 ] time)
+              (if m /= And4 then (epwf [ Tuple 0.0 0.0, Tuple 0.15 0.8, Tuple 10.0 0.8 ] time) else (maybe defaultParam (\andOnset -> (epwf [ Tuple 0.0 0.8, Tuple 0.1 0.1, Tuple 0.2 0.8, Tuple 0.3 0.1, Tuple 0.4 0.8, Tuple 0.5 0.1, Tuple 0.6 0.8, Tuple 0.7 0.1, Tuple 0.8 0.8, Tuple 0.9 0.1, Tuple 1.0 0.8 ] (t - andOnset))) (M.lookup And4 ac.markerOnsets)))
               ( lowpass_
                   "C#CelloLoopLowpass"
                   (175.0 + (-100.0 * (cos ((wobbleRate time) * rad)))) -- 75.0 orig
@@ -788,7 +788,7 @@ veryFarDrones =
             : ( pannerMono_
                   "C#BassPan"
                   (2.0 * (skewedTriangle01 (0.94 - (min 0.44 (time * 0.1))) 2.0 time) - 1.0)
-                  (gain_' "C#BassGain" (1.0 * (bassDroneVol time)) (loopBuf_ "C#BassLoop" "bass-c-sharp" 0.5 0.0 4.3))
+                  (gain_' "C#BassGain" (((if m /= And4 then 1.0 else (maybe 1.0 (\andOnset -> max 0.0 (t - andOnset)) (M.lookup And4 ac.markerOnsets))) * (bassDroneVol time))) (loopBuf_ "C#BassLoop" "bass-c-sharp" 0.5 0.0 4.3))
               )
             : Nil
     )
