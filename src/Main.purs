@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -553,6 +553,195 @@ chanTed =
                   { mic: boundByCueNac''' Chan1 Ted1 (pmic "Chan1Mic") m
                   }
               }
+    )
+
+data Harm0
+  = Harm0'A
+  | Harm0'120
+  | Harm0'110
+  | Harm0'90
+  | Harm0'70
+  | Harm0'40
+
+derive instance harm0Eq :: Eq Harm0
+
+harm0Factory :: Number -> Harm0
+harm0Factory t
+  | t < 1.0 = Harm0'A
+  | t < 1.4 = Harm0'120
+  | t < 2.5 = Harm0'70
+  | t < 3.25 = Harm0'A
+  | t < 5.2 = Harm0'40
+  | t < 7.0 = Harm0'110
+  | t < 7.6 = Harm0'A
+  | t < 9.2 = Harm0'120
+  | t < 10.1 = Harm0'40
+  | t < 13.6 = Harm0'110
+  | otherwise = Harm0'A
+
+harm0Gain :: Number -> Harm0 -> Number
+harm0Gain t h = if harm0Factory t == h then 1.0 else 0.0
+
+harm0 :: SigAU
+harm0 =
+  boundByCue Ve2 And4
+    ( \m t ->
+        pure
+          $ ( gainT_ "Harm0Gain"
+                ( epwf
+                    [ Tuple 0.0 0.0
+                    , Tuple 1.0 0.0
+                    , Tuple 2.0 0.1
+                    , Tuple 2.2 0.7
+                    , Tuple 2.4 0.1
+                    , Tuple 3.0 0.7
+                    , Tuple 3.1 0.1
+                    , Tuple 3.2 0.6
+                    , Tuple 10.0 0.3
+                    , Tuple 20.0 0.0
+                    ]
+                    t
+                )
+                ( ( gain_' "Harm0--Gain"
+                      (harm0Gain t Harm0'A)
+                      $ playBuf_
+                          "Harm0--Play"
+                          "harm-0"
+                          1.0
+                  )
+                    :| ( gain_' "Harm0-120Gain"
+                          (harm0Gain t Harm0'120)
+                          $ playBuf_
+                              "Harm0-120Play"
+                              "harm-0-120"
+                              1.0
+                      )
+                    : ( gain_' "Harm0-110Gain"
+                          (harm0Gain t Harm0'110)
+                          $ playBuf_
+                              "Harm0-110Play"
+                              "harm-0-110"
+                              1.0
+                      )
+                    : ( gain_' "Harm0-90Gain"
+                          (harm0Gain t Harm0'90)
+                          $ playBuf_
+                              "Harm0-90Play"
+                              "harm-0-90"
+                              1.0
+                      )
+                    : ( gain_' "Harm0-70Gain"
+                          (harm0Gain t Harm0'70)
+                          $ playBuf_
+                              "Harm0-70Play"
+                              "harm-0-70"
+                              1.0
+                      )
+                    : ( gain_' "Harm0-40Gain"
+                          (harm0Gain t Harm0'40)
+                          $ playBuf_
+                              "Harm0-40Play"
+                              "harm-0-40"
+                              1.0
+                      )
+                    : Nil
+                )
+            )
+    )
+
+--- harm1
+data Harm1
+  = Harm1'A
+  | Harm1'120
+  | Harm1'50
+  | Harm1'90
+
+derive instance harm1Eq :: Eq Harm1
+
+harm1Factory :: Number -> Harm1
+harm1Factory t
+  | t < 1.2 = Harm1'120
+  | t < 2.0 = Harm1'50
+  | t < 3.5 = Harm1'A
+  | t < 3.7 = Harm1'120
+  | t < 4.6 = Harm1'A
+  | t < 4.7 = Harm1'120
+  | t < 5.25 = Harm1'50
+  | t < 5.25 = Harm1'90
+  | otherwise = Harm1'A
+
+harm1Gain :: Number -> Harm1 -> Number
+harm1Gain t h = if harm1Factory t == h then 1.0 else 0.0
+
+harm1 :: SigAU
+harm1 =
+  boundByCue Ve3 And4
+    ( \m t ->
+        pure
+          $ ( gainT_ "Harm1Gain"
+                ( epwf
+                    [ Tuple 0.0 0.0
+                    , Tuple 1.0 0.8
+                    , Tuple 20.0 0.0
+                    ]
+                    t
+                )
+                ( ( gain_' "Harm1--Gain"
+                      (harm1Gain t Harm1'A)
+                      $ playBuf_
+                          "Harm1--Play"
+                          "harm-1"
+                          1.0
+                  )
+                    :| ( gain_' "Harm1-120Gain"
+                          (harm1Gain t Harm1'120)
+                          $ playBuf_
+                              "Harm1-120Play"
+                              "harm-1-120"
+                              1.0
+                      )
+                    : ( gain_' "Harm1-90Gain"
+                          (harm1Gain t Harm1'90)
+                          $ playBuf_
+                              "Harm1-90Play"
+                              "harm-1-90"
+                              1.0
+                      )
+                    : ( gain_' "Harm1-50Gain"
+                          (harm1Gain t Harm1'50)
+                          $ playBuf_
+                              "Harm1-50Play"
+                              "harm-1-50"
+                              1.0
+                      )
+                    : Nil
+                )
+            )
+    )
+
+harm2 :: SigAU
+harm2 =
+  boundByCue O4 And4
+    ( \m t ->
+        pure
+          $ ( gainT_ "Harm2Gain"
+                ( epwf
+                    [ Tuple 0.0 0.0
+                    , Tuple 1.0 0.6
+                    , Tuple 20.0 0.0
+                    ]
+                    t
+                )
+                ( ( gain_' "Harm2--Gain"
+                      1.0
+                      $ playBuf_
+                          "Harm2--Play"
+                          "harm-2"
+                          1.0
+                  )
+                    :| Nil
+                )
+            )
     )
 
 veryFarDrones :: SigAU
@@ -1624,10 +1813,13 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , farChimes
               , farShriek
               , farBirds
+              , harm0
               , veRy3
               , far3
+              , harm1
               , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
               , guitarSingleton "b" "e-guitar" 0.3 Ry3
+              , harm2
               , overLandAnd
               , seaVoice
               ]
@@ -1676,6 +1868,20 @@ main =
         , Tuple "kettle-c-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleC4.ogg"
         , Tuple "kettle-e-flat-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleEFlat4.ogg"
         , Tuple "kettle-f-sharp-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleFSharp4.ogg"
+        -- harmonic stuff
+        , Tuple "harm-0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad.ogg"
+        , Tuple "harm-0-120" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad120.ogg"
+        , Tuple "harm-0-110" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad110.ogg"
+        , Tuple "harm-0-90" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad90.ogg"
+        , Tuple "harm-0-70" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad70.ogg"
+        , Tuple "harm-0-40" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad40.ogg"
+        , Tuple "harm-1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad.ogg"
+        , Tuple "harm-1-120" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad120.ogg"
+        , Tuple "harm-1-50" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad50.ogg"
+        , Tuple "harm-1-90" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad90.ogg"
+        , Tuple "harm-2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpDSharpDiadPad100.ogg"
+        -- snare
+        , Tuple "snare-hit" "https://freesound.org/data/previews/100/100393_377011-lq.mp3"
         -- foghorns
         -- low, grave
         -- , Tuple "distant-low-blast" "https://freesound.org/data/previews/500/500146_401348-lq.mp3"

@@ -7,15 +7,10 @@ import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
 import FRP.Behavior.Audio (AudioUnit, decodeAudioDataFromUri, gain', loopBuf, runInBrowser, speaker')
 import Foreign.Object as O
-import Math (pi, sin)
 import Type.Klank.Dev (Klank, Buffers, affable, klank)
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene time =
-  let
-    rad = pi * time
-  in
-    pure $ speaker' (gain' 1.0 (loopBuf "scratch" 1.0 0.0 0.0))
+scene time = pure $ speaker' (gain' 1.0 (loopBuf "scratch" 1.0 0.0 0.0))
 
 buffers :: Buffers
 buffers ctx _ =
