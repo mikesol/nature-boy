@@ -469,7 +469,7 @@ theySayHeWanderedCymbal =
               ( if m /= Ve2 then
                   1.0
                 else
-                  (maybe 1.0 (\veOnset -> (max 0.0 (t - veOnset))) (M.lookup Ve2 ac.markerOnsets))
+                  (maybe 1.0 (\veOnset -> (max 0.0 (1.0 - 0.6 * (t - veOnset)))) (M.lookup Ve2 ac.markerOnsets))
               )
               (playBuf_ "TheySayHeWanderedCymbalBuffer" "revcym" 1.0)
         in
@@ -761,6 +761,32 @@ harm2 =
                           "Harm2--Play"
                           "harm-2"
                           1.0
+                  )
+                    :| Nil
+                )
+            )
+    )
+
+landEggTimer :: SigAU
+landEggTimer =
+  boundByCueWithOnset Land4 And4
+    ( \ac onset m t ->
+        pure
+          $ ( gainT_ "LandEggGain"
+                ( epwf
+                    [ Tuple 0.0 0.0
+                    , Tuple 3.0 1.0
+                    ]
+                    t
+                )
+                ( ( gain_' "LandEgg--Gain"
+                      1.0
+                      $ loopBuf_
+                          "LandEgg--Play"
+                          "egg-timer-ticking"
+                          1.0
+                          0.0
+                          (0.15 + 0.1 * sin ((t - onset) * pi))
                   )
                     :| Nil
                 )
@@ -1874,6 +1900,7 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , harm2
               , overLandAnd
               , snare
+              , landEggTimer
               , seaVoice
               ]
         )
@@ -1933,22 +1960,23 @@ main =
         , Tuple "harm-1-50" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad50.ogg"
         , Tuple "harm-1-90" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad90.ogg"
         , Tuple "harm-2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpDSharpDiadPad100.ogg"
+        , Tuple "a-little-shy" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/aLittleShyAndSadOfEyeButVeryWiseWasHe.ogg"
         -- snare
-        , Tuple "snare-hit" "https://freesound.org/data/previews/100/100393_377011-lq.mp3"
+        , Tuple "snare-hit" "https://freesound.org/data/previews/100/100393_377011-hq.mp3"
         -- foghorns
         -- low, grave
-        -- , Tuple "distant-low-blast" "https://freesound.org/data/previews/500/500146_401348-lq.mp3"
+        -- , Tuple "distant-low-blast" "https://freesound.org/data/previews/500/500146_401348-hq.mp3"
         -- nasty, clippy, beautiful
-        -- , Tuple "nasty-rich-low" "https://freesound.org/data/previews/234/234681_1708550-lq.mp3"
+        -- , Tuple "nasty-rich-low" "https://freesound.org/data/previews/234/234681_1708550-hq.mp3"
         -- bold, straight
-        -- , Tuple "bold-straight-pvc" "https://freesound.org/data/previews/507/507472_2977885-lq.mp3"
+        -- , Tuple "bold-straight-pvc" "https://freesound.org/data/previews/507/507472_2977885-hq.mp3"
         -- single low-ish blast
-        -- , Tuple "single-clear-blast" "https://freesound.org/data/previews/81/81874_1285056-lq.mp3"
+        -- , Tuple "single-clear-blast" "https://freesound.org/data/previews/81/81874_1285056-hq.mp3"
         -- higher
-        -- , Tuple "higher-fog-horn" "https://freesound.org/data/previews/92/92911_37876-lq.mp3"
+        -- , Tuple "higher-fog-horn" "https://freesound.org/data/previews/92/92911_37876-hq.mp3"
         --------------------------------
         -- harmonic rising, glitchy
-        -- , Tuple "rising-harm" "https://freesound.org/data/previews/430/430865_45576-lq.mp3"
+        -- , Tuple "rising-harm" "https://freesound.org/data/previews/430/430865_45576-hq.mp3"
         -- , Tuple "sitar" "https://freesound.org/data/previews/37/37715_347704-hq.mp3"
         ----------- pads
         -- , Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
@@ -1966,21 +1994,21 @@ main =
         --, Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
         --, Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
         -- Ambiance
-        --, Tuple "costal-ambiance" "https://freesound.org/data/previews/207/207553_285997-lq.mp3"
-        --, Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-lq.mp3"
-        --, Tuple "robin" "https://freesound.org/data/previews/416/416529_5121236-lq.mp3"
+        --, Tuple "costal-ambiance" "https://freesound.org/data/previews/207/207553_285997-hq.mp3"
+        --, Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-hq.mp3"
+        --, Tuple "robin" "https://freesound.org/data/previews/416/416529_5121236-hq.mp3"
         ------------- shredders
         -- second half good... nice and gear-y
-        --, Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-lq.mp3"
-        --, Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-lq.mp3"
-        --, Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-lq.mp3"
-        --, Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-lq.mp3"
-        --, Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-lq.mp3"
+        --, Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-hq.mp3"
+        --, Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-hq.mp3"
+        --, Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-hq.mp3"
+        --, Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-hq.mp3"
+        --, Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-hq.mp3"
         -------------------- egg timer
-        --, Tuple "egg-timer-wind-plus-ring" "https://freesound.org/data/previews/14/14263_31076-lq.mp3"
-        --, Tuple "egg-timer-ticking" "https://freesound.org/data/previews/468/468081_2247456-lq.mp3"
+        --, Tuple "egg-timer-wind-plus-ring" "https://freesound.org/data/previews/14/14263_31076-hq.mp3"
+        , Tuple "egg-timer-ticking" "https://freesound.org/data/previews/468/468081_2247456-hq.mp3"
         ------------------ gamelan
-        --, Tuple "gamelan-bali" "https://freesound.org/data/previews/257/257625_3932570-lq.mp3"
+        --, Tuple "gamelan-bali" "https://freesound.org/data/previews/257/257625_3932570-hq.mp3"
         , Tuple "low-c#-cello-drone" "https://freesound.org/data/previews/195/195278_3623377-hq.mp3"
         --, Tuple "handbell-c#" "https://freesound.org/data/previews/339/339808_5121236-hq.mp3"
         --, Tuple "guitar-8th-c#" "https://freesound.org/data/previews/372/372386_5968459-hq.mp3"
@@ -2010,7 +2038,7 @@ main =
         , Tuple "middle-g-sharp-guitar" "https://freesound.org/data/previews/154/154013_2626346-hq.mp3"
         , Tuple "high-g-sharp-guitar" "https://freesound.org/data/previews/153/153984_2626346-hq.mp3"
         , Tuple "e-guitar" "https://freesound.org/data/previews/153/153980_2626346-hq.mp3"
-        , Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-lq.mp3"
+        , Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-hq.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
