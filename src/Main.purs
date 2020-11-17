@@ -460,13 +460,36 @@ deredGong = boundByCueWithOnset Dered2 Ry3 \ac onset m t -> let time = t - onset
 
 theySayHeWanderedCymbal :: SigAU
 theySayHeWanderedCymbal =
-  boundByCue They2 Dered2
-    ( \m n ->
-        pure
-          $ gain_'
-              "TheySayHeWanderedCymbal"
-              1.0
-              (playBuf_ "TheySayHeWanderedCymbal" "revcym" 1.0)
+  boundByCueWithOnset They2 Ve2
+    ( \ac onset m t ->
+        let
+          sound =
+            gain_'
+              "TheySayHeWanderedCymbalGain"
+              ( if m /= Ve2 then
+                  1.0
+                else
+                  (maybe 1.0 (\veOnset -> (max 0.0 (t - veOnset))) (M.lookup Ve2 ac.markerOnsets))
+              )
+              (playBuf_ "TheySayHeWanderedCymbalBuffer" "revcym" 1.0)
+        in
+          if m /= Ve2 then
+            pure sound
+          else
+            pure
+              $ graph_ "TheySayHeWanderedCymbalGraph"
+                  { aggregators:
+                      { out: Tuple (g'add_ "TheySayHeWanderedCymbalOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                      , combine: Tuple (g'add_ "TheySayHeWanderedCymbalCombine") (SLProxy :: SLProxy ("gain" :/ "revcym" :/ SNil))
+                      , gain: Tuple (g'gain_ "TheySayHeWanderedCymbalDelayGain" 0.6) (SLProxy :: SLProxy ("del" :/ SNil))
+                      }
+                  , processors:
+                      { del: Tuple (g'delay_ "TheySayHeWanderedCymbalDelay" 0.2) (SProxy :: SProxy "combine")
+                      }
+                  , generators:
+                      { revcym: sound
+                      }
+                  }
     )
 
 boundLowGSharpCello :: String -> Number -> List (AudioUnit D2)
