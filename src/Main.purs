@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -311,6 +311,16 @@ seaVoice =
                   { mic: pmic "seaMic"
                   }
               }
+    )
+
+aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp :: SigAU
+aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp =
+  boundByCueWithOnset A5 And7
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (bandpass_ "ALittleShyBandpass" (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ "ALittleShyBuf" "scratch" 1.0 0.0 0.0)
     )
 
 a0 :: SigAU
@@ -1902,6 +1912,7 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , snare
               , landEggTimer
               , seaVoice
+              , aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp
               ]
         )
         acc.currentMarker

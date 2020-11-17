@@ -11,7 +11,7 @@ import Math (sin, pi)
 import Type.Klank.Dev (Klank, Buffers, affable, klank)
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene time = pure $ speaker' (gain' 1.0 (bandpass (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3) ) $ loopBuf "scratch" 1.0 0.0 0.0))
+scene time = pure $ speaker' (gain' 1.0 (bandpass (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf "scratch" 1.0 0.0 0.0))
 
 buffers :: Buffers
 buffers ctx _ =
