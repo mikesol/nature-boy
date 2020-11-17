@@ -947,6 +947,35 @@ guitarSingleton tag name gain st =
               )
     )
 
+snare :: SigAU
+snare =
+  boundByCue Ver4 And4
+    ( \m t ->
+        pure
+          $ graph_
+              "SnareGrpah"
+              { aggregators:
+                  { out: Tuple (g'add_ "SnareOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "SnareCombine") (SLProxy :: SLProxy ("gain" :/ "snare" :/ SNil))
+                  , gain: Tuple (g'gain_ "SnareGraphGain" 0.93) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "SnareGraphDelay" (0.31 + 0.02 * sin (pi * t))) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { snare:
+                      ( gain_' "SnareGain"
+                          0.6
+                          ( playBuf_
+                              "SnareBuf"
+                              "snare-hit"
+                              1.0
+                          )
+                      )
+                  }
+              }
+    )
+
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
 compVeryStrangeEnchantedBoy Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
@@ -1821,6 +1850,7 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , guitarSingleton "b" "e-guitar" 0.3 Ry3
               , harm2
               , overLandAnd
+              , snare
               , seaVoice
               ]
         )
