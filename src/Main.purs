@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, iirFilter_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -1528,6 +1528,36 @@ bassManyThings =
             )
     )
 
+improGlitch :: SigAU
+improGlitch =
+  boundByCueWithOnset Day7 Turn13
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gainT_' "improGlitchGain" (epwf [ Tuple 0.0 1.0, Tuple 5.0 1.0, Tuple 5.04 0.07, Tuple 10.0 0.07, Tuple 13.0 1.0, Tuple 15.0 1.0, Tuple 15.4 0.07, Tuple 20.0 0.07, Tuple 26.0 1.0, Tuple 31.0 1.0, Tuple 31.02 0.07, Tuple 33.0 0.07, Tuple 33.05 1.0, Tuple 33.38 1.0, Tuple 33.44 0.13, Tuple 36.0 0.07, Tuple 40.0 0.13, Tuple 48.1 0.13, Tuple 50.0 0.7, Tuple 54.3 0.7, Tuple 55.0 0.1, Tuple 57.0 0.0, Tuple 63.0 0.0, Tuple 66.0 0.1, Tuple 71.0 0.1, Tuple 71.2 0.0, Tuple 74.0 0.0, Tuple 74.2 0.6, Tuple 74.8 0.2, Tuple 90.0 0.0 ] time) (playBuf_ "improGlitchBuf" "impro-glitch" 1.0))
+    )
+
+improWobble :: SigAU
+improWobble =
+  boundByCueWithOnset Passed8 Turn13
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (highpassT_ "improWobbleHpf" (epwf [ Tuple 0.0 3000.0, Tuple 5.0 3000.0, Tuple 2000.0 6.0, Tuple 2000.0 11.0, Tuple 1000.0 12.0, Tuple 2000.0 15.0, Tuple 2000.0 21.0, Tuple 2000.0 29.0, Tuple 300.0 30.0, Tuple 2500.0 39.0, Tuple 2500.0 46.0, Tuple 1000.0 49.0, Tuple 3000.0 55.0, Tuple 3000.0 57.0, Tuple 400.0 59.8, Tuple 4000.0 75.0 ] time) (defaultParam { param = 1.0 }) (playBuf_ "improWobbleBuf" "impro-wobbly" 1.0))
+    )
+
+improFiligree :: SigAU
+improFiligree =
+  boundByCueWithOnset Me11 Turn13
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gainT_' "improFiligreeGain" (epwf [ Tuple 0.0 0.0, Tuple 1.0 1.0 ] time) (playBufWithOffset_ "improFiligreeBuf" "impro-filigree" 1.0 3.0))
+    )
+
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
 compVeryStrangeEnchantedBoy Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
@@ -2397,6 +2427,8 @@ natureBoy =
   , bassGlitch1
   , bassGlitch2
   , bassManyThings
+  , improGlitch
+  , improWobble
   ]
     <> secondPartBP ::
     Array SigAU
@@ -2597,6 +2629,10 @@ main =
         , Tuple "beautiful-birds" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/birds.ogg"
         , Tuple "plane-landing" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/planeLanding.ogg"
         , Tuple "wall-clock" "https://freesound.org/data/previews/188/188615_3330286-lq.mp3"
+        -- impros
+        , Tuple "impro-glitch" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/improGlitch.ogg"
+        , Tuple "impro-wobbly" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/improWobblyGlitch.ogg"
+        , Tuple "impro-filigree" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/improFiligree.ogg"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
