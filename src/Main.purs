@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, iirFilter_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -109,6 +109,9 @@ loopT t = lcmap (_ % t)
 
 boundPlayer :: forall a. Number -> (Number -> List a) -> Number -> List a
 boundPlayer len a time = if (time) + kr >= 0.0 && time < (len) then a time else Nil
+
+overZeroPlayer :: forall a. (Number -> List a) -> Number -> List a
+overZeroPlayer = boundPlayer 100000.0 -- large enough...
 
 skewedTriangle01 :: Number -> Number -> Number -> Number
 skewedTriangle01 os len = lcmap (_ % len) go
@@ -631,7 +634,7 @@ littleShyHigh =
         let
           time = t - onset
         in
-          atT 0.4 (boundPlayer 100.0 (const $ pure (gain_' "aLittleShyHighGain" (min (time * 0.3) 1.0) (playBuf_ "aLittleShyHighBuf" "g-sharp-a-sharp-high" 1.0)))) time
+          atT 0.4 (overZeroPlayer (const $ pure (gain_' "aLittleShyHighGain" (min (time * 0.3) 1.0) (playBuf_ "aLittleShyHighBuf" "g-sharp-a-sharp-high" 1.0)))) time
     )
 
 sadOfEyeHigh :: SigAU
@@ -641,7 +644,7 @@ sadOfEyeHigh =
         let
           time = t - onset
         in
-          atT 0.3 (boundPlayer 100.0 (const $ pure (gain_' "sadOfEyeHighGain" (min (time * 0.25) 1.0) (playBuf_ "sadOfEyeHighGain" "c-sharp-d-sharp-high" 1.0)))) time
+          atT 0.3 (overZeroPlayer (const $ pure (gain_' "sadOfEyeHighGain" (min (time * 0.25) 1.0) (playBuf_ "sadOfEyeHighGain" "c-sharp-d-sharp-high" 1.0)))) time
     )
 
 veryWiseWasHeHigh :: SigAU
@@ -651,7 +654,7 @@ veryWiseWasHeHigh =
         let
           time = t - onset
         in
-          atT 0.1 (boundPlayer 100.0 (const $ pure (gain_' "veryWiseWasHeGain" (min (time * 0.2) 1.0) (playBuf_ "veryWiseWasHeGain" "g-a-high" 1.0)))) time
+          atT 0.1 (overZeroPlayer (const $ pure (gain_' "veryWiseWasHeGain" (min (time * 0.2) 1.0) (playBuf_ "veryWiseWasHeGain" "g-a-high" 1.0)))) time
     )
 
 a0 :: SigAU
@@ -781,19 +784,19 @@ singleLowGSharpCello s time =
   )
 
 theyGong :: SigAU
-theyGong = boundByCueWithOnset They2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.5 $ boundPlayer 100.0 (const $ pure (playBuf_ ("They2GongPlayer") "kettle-g-sharp-3" 1.0))) time
+theyGong = boundByCueWithOnset They2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.5 $ overZeroPlayer (const $ pure (playBuf_ ("They2GongPlayer") "kettle-g-sharp-3" 1.0))) time
 
 sayGong :: SigAU
-sayGong = boundByCueWithOnset Say2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.4 $ boundPlayer 100.0 (const $ pure (playBuf_ ("Say2GongPlayer") "kettle-a-3" 1.0))) time
+sayGong = boundByCueWithOnset Say2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.4 $ overZeroPlayer (const $ pure (playBuf_ ("Say2GongPlayer") "kettle-a-3" 1.0))) time
 
 heGong :: SigAU
-heGong = boundByCueWithOnset He2 Dered2 \ac onset m t -> let time = t - onset in (atT 0.4 $ boundPlayer 100.0 (const $ pure (playBuf_ ("He2GongPlayer") "kettle-c-4" 1.0))) time
+heGong = boundByCueWithOnset He2 Dered2 \ac onset m t -> let time = t - onset in (atT 0.4 $ overZeroPlayer (const $ pure (playBuf_ ("He2GongPlayer") "kettle-c-4" 1.0))) time
 
 wanGong :: SigAU
-wanGong = boundByCueWithOnset Wan2 Ve3 \ac onset m t -> let time = t - onset in (atT 0.3 $ boundPlayer 100.0 (const $ pure (playBuf_ ("Wan2GongPlayer") "kettle-e-flat-4" 1.0))) time
+wanGong = boundByCueWithOnset Wan2 Ve3 \ac onset m t -> let time = t - onset in (atT 0.3 $ overZeroPlayer (const $ pure (playBuf_ ("Wan2GongPlayer") "kettle-e-flat-4" 1.0))) time
 
 deredGong :: SigAU
-deredGong = boundByCueWithOnset Dered2 Ry3 \ac onset m t -> let time = t - onset in (atT 0.2 $ boundPlayer 100.0 (const $ pure (playBuf_ ("Dered2GongPlayer") "kettle-f-sharp-4" 1.0))) time
+deredGong = boundByCueWithOnset Dered2 Ry3 \ac onset m t -> let time = t - onset in (atT 0.2 $ overZeroPlayer (const $ pure (playBuf_ ("Dered2GongPlayer") "kettle-f-sharp-4" 1.0))) time
 
 theySayHeWanderedCymbal :: SigAU
 theySayHeWanderedCymbal =
@@ -950,7 +953,7 @@ harm0 =
           t' = t'' - onset
         in
           atT 0.6
-            ( boundPlayer 100.0
+            ( overZeroPlayer
                 ( \t ->
                     ( pure
                         ( gainT_ "Harm0Gain"
@@ -1051,7 +1054,7 @@ harm1 =
           t' = t'' - onset
         in
           atT 0.5
-            ( boundPlayer 100.0
+            ( overZeroPlayer
                 ( \t ->
                     pure
                       ( gainT_ "Harm1Gain"
@@ -1467,27 +1470,63 @@ bassplz :: Marker -> Marker -> Number -> String -> Number -> Number -> Number ->
 bassplz st ed startsAt tag globalGain del gn os filt kink backwards rate =
   boundByCueWithOnset st ed \ac onset m t ->
     let
-      time = t - onset - startsAt
+      time' = t - onset - startsAt
     in
-      if time < 0.0 then
-        Nil
-      else
-        ( pure $ gain_' (tag <> "bassPlzFader") globalGain
-            $ graph_ (tag <> "bassPlzGraph")
-                { aggregators:
-                    { out: Tuple (g'add_ (tag <> "bassPlzOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
-                    , combine: Tuple (g'add_ (tag <> "bassPlzCombine")) (SLProxy :: SLProxy ("gain" :/ "bass" :/ SNil))
-                    , gain: Tuple (g'gain_ (tag <> "bassPlzGain") gn) (SLProxy :: SLProxy ("del" :/ SNil))
+      overZeroPlayer
+        ( \time ->
+            ( pure $ gain_' (tag <> "bassPlzFader") globalGain
+                $ graph_ (tag <> "bassPlzGraph")
+                    { aggregators:
+                        { out: Tuple (g'add_ (tag <> "bassPlzOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+                        , combine: Tuple (g'add_ (tag <> "bassPlzCombine")) (SLProxy :: SLProxy ("gain" :/ "bass" :/ SNil))
+                        , gain: Tuple (g'gain_ (tag <> "bassPlzGain") gn) (SLProxy :: SLProxy ("del" :/ SNil))
+                        }
+                    , processors:
+                        { del: Tuple (g'delay_ (tag <> "bassPlzDelay") del) (SProxy :: SProxy "combine")
+                        }
+                    , generators:
+                        { bass:
+                            (gainT_' (tag <> "bassPlzImpulse") (if backwards then (epwf [ Tuple 0.0 0.0, Tuple (1.0 - kink) 0.1, Tuple 1.0 1.0, Tuple 1.06 0.0 ] time) else (epwf [ Tuple 0.0 1.0, Tuple kink 0.1, Tuple 1.0 0.0 ] time)) $ filt (playBufWithOffset_ (tag <> "bassPlzBuf") "bassplz" (rate time) os))
+                        }
                     }
-                , processors:
-                    { del: Tuple (g'delay_ (tag <> "bassPlzDelay") del) (SProxy :: SProxy "combine")
-                    }
-                , generators:
-                    { bass:
-                        (gainT_' (tag <> "bassPlzImpulse") (if backwards then (epwf [ Tuple 0.0 0.0, Tuple (1.0 - kink) 0.1, Tuple 1.0 1.0, Tuple 1.06 0.0 ] time) else (epwf [ Tuple 0.0 1.0, Tuple kink 0.1, Tuple 1.0 0.0 ] time)) $ filt (playBufWithOffset_ (tag <> "bassPlzBuf") "bassplz" (rate time) os))
-                    }
-                }
+            )
         )
+        time'
+
+bassGlitch1 = bassGlitch He8 "bg-1" 7.0 :: SigAU
+
+bassGlitch2 = bassGlitch We9 "bg-2" 30.0 :: SigAU
+
+bassGlitch :: Marker -> String -> Number -> SigAU
+bassGlitch mk tag os = boundByCue'' mk mk (pure (gain_' (tag <> "bassPlzImpulse") 1.0 $ (playBufWithOffset_ (tag <> "bassPlzBuf") "nasty-bass" 1.0 os)))
+
+bassManyThings :: SigAU
+bassManyThings =
+  boundByCueWithOnset Ma9 Me11
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure
+            ( gain_' "gain-bass-many-things" (if m == Me11 then (maybe 1.0 (\x -> max 0.0 (1.0 - 0.1 * (t - x))) (M.lookup Me11 ac.markerOnsets)) else 1.0)
+                ( ( case m of
+                      Ma9 -> identity
+                      Ny9 -> iirFilter_ "iir-ny9" (0.0050662636 +> 0.0101325272 +> 0.0050662636 +> empty) (1.0632762845 +> -1.9197349456 +> 0.9367237155 +> empty)
+                      Things9 -> bandpass_ "bandpass-ma9" (maybe 100.0 (\x -> 100.0 + 500.0 * (t - x)) (M.lookup Things9 ac.markerOnsets)) 5.0
+                      Fools10 -> identity
+                      And10 -> highpass_ "highpass-and10" 1000.0 3.0
+                      Kings10 -> bandpass_ "lowpass-kings10" 140.0 (maybe 0.5 (\x -> max 0.5 $ 12.0 - 3.0 * (t - x)) (M.lookup Kings10 ac.markerOnsets))
+                      This11 -> identity
+                      He11 -> lowpass_ "lp-he11" 300.0 4.0
+                      Said11 -> highpass_ "hp-said11" 1500.0 3.0
+                      To11 -> identity
+                      Me11 -> lowpass_ "mtf-me11" 80.0 10.0
+                      _ -> identity
+                  )
+                    (playBuf_ "many-things-bass" "nasty-bass" 1.0)
+                )
+            )
+    )
 
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
@@ -2355,6 +2394,9 @@ natureBoy =
   , wiseWasHeAndClock
   ----------- pt 2
   , andPt2Voice
+  , bassGlitch1
+  , bassGlitch2
+  , bassManyThings
   ]
     <> secondPartBP ::
     Array SigAU
@@ -2468,6 +2510,8 @@ main =
         , Tuple "and-sad-of-eye" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andSadOfEye.ogg"
         , Tuple "but-very-wise-was" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/butVeryWiseWas.ogg"
         , Tuple "he" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/he.ogg"
+        -- bass
+        , Tuple "nasty-bass" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/nastyBass.ogg"
         -- snare
         , Tuple "snare-hit" "https://freesound.org/data/previews/100/100393_377011-hq.mp3"
         -- foghorns
