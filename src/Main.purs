@@ -448,6 +448,16 @@ butVeryWiseWasAccomp = alsAccomp "but-very-wise-was" But6 Was6 :: SigAU
 
 heAccomp = alsAccomp "he" He6 He6 :: SigAU
 
+heRichSwell :: SigAU
+heRichSwell =
+  boundByCueWithOnset Ve6 Was6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (pannerMono_ "heRichSwellPan" 0.0 (gain_ "heRichSwellFade" 1.0 ((gain_' "heRichSwellGain0" (max 0.3 $ time * 0.4) (periodicOsc_ "heRichSwellOsc0" "rich" (conv440 32.0))) :| (gain_' "heRichSwellGain1" (max 0.2 $ time * 0.5) (periodicOsc_ "heRichSwellOsc1" "rich" (conv440 44.0))) : Nil)))
+    )
+
 -- (wah "test" "smooth" 0.4 3 (60.0 : 64.0 : 67.0 : Nil) Nothing 0.2 0.9 0.5 0.5 time)
 bpWah :: Number -> String -> String -> Number -> Int -> List Number -> Maybe Number -> Number -> Number -> Number -> Number -> Number -> List (AudioUnit D2)
 bpWah t tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd = atT t (boundPlayer (len + 0.3) (wah tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd))
@@ -507,6 +517,94 @@ planeLanding =
         in
           pure (gainT_' "planeLandingGain" (epwf [ Tuple 0.0 0.0, Tuple 1.0 1.0, Tuple 1.64 1.0, Tuple 1.7 0.0, Tuple 1.8 1.0, Tuple 2.24 1.0, Tuple 2.3 0.0, Tuple 2.4 1.0, Tuple 2.6 1.0, Tuple 2.65 0.0, Tuple 2.72 1.0, Tuple 2.9 1.0, Tuple 2.94 0.0, Tuple 3.0 1.0, Tuple 3.4 1.0, Tuple 3.42 0.0, Tuple 3.5 1.0, Tuple 3.6 1.0, Tuple 3.62 0.0, Tuple 3.7 1.0 ] time) (playBuf_ "planeLandingBuf" "plane-landing" 1.0))
     )
+
+scratchySwellHe :: SigAU
+scratchySwellHe =
+  boundByCueWithOnset He6 He6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (highpass_ "scratchySwellHeHP" (4500.0 - ((skewedTriangle01 0.8 1.5 time) * 2500.0)) 3.0 (loopBuf_ "scratchySwellHeBuf" "scratchy-swell" 1.0 0.0 0.0))
+    )
+
+data WasHeBuffer
+  = WHWarble
+  | WHToTheHeavens
+  | WHShakyScratchy
+
+makeWHBuffer :: WasHeBuffer -> Number -> Number -> Number -> Number -> Number -> List (AudioUnit D2)
+makeWHBuffer whs when os len hpf =
+  atT when
+    $ boundPlayer (len + 0.06)
+        ( \t ->
+            pure
+              ( gainT_' (show t <> "whGain") (epwf [ Tuple 0.0 0.0, Tuple (len / 2.0) 0.1, Tuple (4.0 * len / 5.0) 0.2, Tuple len 1.0, Tuple (len + 0.022) 0.0 ] t)
+                  ( highpass_ (show t <> "whHighPass") hpf 1.0
+                      ( playBufWithOffset_ (show t <> "whBuf")
+                          ( case whs of
+                              WHWarble -> "warble"
+                              WHToTheHeavens -> "to-the-heavens"
+                              WHShakyScratchy -> "shaky-scratchy"
+                          )
+                          1.0
+                          ( max os
+                              ( case whs of
+                                  WHWarble -> 18.0
+                                  WHToTheHeavens -> 24.0
+                                  WHShakyScratchy -> 12.0
+                              )
+                          )
+                      )
+                  )
+              )
+        )
+
+whbufs :: Array (Number -> List (AudioUnit D2))
+whbufs =
+  [ makeWHBuffer WHWarble 0.1 4.3 1.3 3500.0
+  , makeWHBuffer WHToTheHeavens 0.9 2.3 0.6 2000.0
+  , makeWHBuffer WHShakyScratchy 1.5 1.3 0.4 4000.0
+  , makeWHBuffer WHWarble 1.9 0.4 0.4 2000.0
+  , makeWHBuffer WHToTheHeavens 2.2 0.7 0.48 1500.0
+  , makeWHBuffer WHShakyScratchy 2.3 0.1 0.47 1000.0
+  , makeWHBuffer WHToTheHeavens 2.45 5.2 0.42 500.0
+  , makeWHBuffer WHShakyScratchy 2.55 4.3 0.41 3000.0
+  , makeWHBuffer WHShakyScratchy 2.65 3.8 0.35 3500.0
+  , makeWHBuffer WHToTheHeavens 2.8 1.2 0.48 2000.0
+  , makeWHBuffer WHShakyScratchy 2.9 1.7 0.52 1500.0
+  , makeWHBuffer WHWarble 3.1 0.1 0.8 1200.0
+  , makeWHBuffer WHShakyScratchy 3.35 0.0 0.12 1100.0
+  , makeWHBuffer WHToTheHeavens 3.45 0.82 0.15 900.0
+  , makeWHBuffer WHShakyScratchy 3.5 3.2 0.45 1900.0
+  , makeWHBuffer WHWarble 3.62 2.2 0.22 2000.0
+  , makeWHBuffer WHToTheHeavens 3.7 4.3 0.23 200.0
+  , makeWHBuffer WHToTheHeavens 3.85 2.1 0.34 3500.0
+  , makeWHBuffer WHShakyScratchy 3.9 5.3 0.56 2000.0
+  , makeWHBuffer WHWarble 4.05 3.3 0.75 1200.0
+  , makeWHBuffer WHShakyScratchy 4.15 1.3 0.235 1000.0
+  , makeWHBuffer WHToTheHeavens 4.2 0.85 0.2 700.0
+  , makeWHBuffer WHToTheHeavens 4.4 7.3 0.234 1900.0
+  , makeWHBuffer WHWarble 4.45 8.1 0.6 2100.0
+  , makeWHBuffer WHShakyScratchy 4.5 5.6 0.1 1400.0
+  , makeWHBuffer WHShakyScratchy 5.0 10.2 0.234 1300.0
+  , makeWHBuffer WHWarble 5.1 4.2 0.88 1200.0
+  , makeWHBuffer WHToTheHeavens 5.12 0.7 0.54 1100.0
+  , makeWHBuffer WHShakyScratchy 5.23 6.8 0.235 1200.0
+  , makeWHBuffer WHShakyScratchy 5.25 4.43 0.32 1300.0
+  , makeWHBuffer WHWarble 5.3 7.1 0.4 1400.0
+  , makeWHBuffer WHWarble 5.45 1.7 0.3 1500.0
+  , makeWHBuffer WHToTheHeavens 5.5 0.01 0.55 1600.0
+  , makeWHBuffer WHShakyScratchy 5.53 0.56 0.3 1700.0
+  , makeWHBuffer WHShakyScratchy 5.6 2.45 0.2 800.0
+  , makeWHBuffer WHWarble 5.61 6.4 0.19 900.0
+  , makeWHBuffer WHToTheHeavens 5.69 9.9 0.25 1000.0
+  , makeWHBuffer WHShakyScratchy 5.96 8.32 0.24 1100.0
+  , makeWHBuffer WHToTheHeavens 6.1 8.1 0.23 1200.0
+  ]
+
+wasHeGlitches :: SigAU
+wasHeGlitches = boundByCueWithOnset Was6 He6 \_ onset _ t -> fold (map (\f -> f (t - onset)) whbufs)
 
 littleShyHigh :: SigAU
 littleShyHigh =
@@ -2168,7 +2266,10 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , veryWiseWasHeWahs
               , veryWiseWasBassoon
               , veryWiseWasSkiddaw
+              , wasHeGlitches
               , planeLanding
+              , heRichSwell
+              , scratchySwellHe
               ]
         )
         acc.currentMarker
@@ -2263,17 +2364,23 @@ main =
         ----------- pads
         -- , Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
         --, Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-hq.mp3"
-        --, Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-hq.mp3"
-        --, Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-hq.mp3"
+        -- yesHe
+        , Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-hq.mp3"
+        -- yesHe
+        , Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-hq.mp3"
         --, Tuple "low-energized" "https://freesound.org/data/previews/33/33182_250881-hq.mp3"
         --, Tuple "ethereal" "https://freesound.org/data/previews/352/352944_6523136-hq.mp3"
+        ------------------------- THIS IS OUR BASS SOUND
+        ------------------------- FOR THE SECOND PART
         --, Tuple "swelling-low" "https://freesound.org/data/previews/119/119059_181941-hq.mp3"
-        --, Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-hq.mp3"
+        -- yes
+        , Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-hq.mp3"
         --, Tuple "low-deep" "https://freesound.org/data/previews/350/350660_1676145-hq.mp3"
         --, Tuple "knock-pad" "https://freesound.org/data/previews/7/7402_1629-hq.mp3"
         --, Tuple "gnarly-feedback" "https://freesound.org/data/previews/213/213906_862453-hq.mp3"
         --, Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-hq.mp3"
-        --, Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
+        -- yesHe
+        , Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
         --, Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
         -- Ambiance
         --, Tuple "costal-ambiance" "https://freesound.org/data/previews/207/207553_285997-hq.mp3"
