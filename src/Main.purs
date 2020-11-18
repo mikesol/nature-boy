@@ -428,15 +428,25 @@ veryWiseWasHeVoice =
           pure $ dup2 (pmic "butVeryWiseWasHePmic") \d -> (gainT_' "butVeryWiseWasHeDry" (epwf [ Tuple 0.0 1.0, Tuple 4.0 0.2, Tuple 6.0 1.0 ] time) d + (gainT_' "butVeryWiseWasHeWet" (epwf [ Tuple 0.0 0.0, Tuple 4.0 0.8, Tuple 6.0 0.0 ] time) $ convolver_ "veryWiseWasHeVoiceConvolver" "matrix-verb-3" d))
     )
 
-aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp :: SigAU
-aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp =
-  boundByCueWithOnset Sea4 And7
+alsAccomp :: String -> Marker -> Marker -> SigAU
+alsAccomp tag st ed =
+  boundByCueWithOnset st ed
     ( \ac onset m t ->
         let
           time = t - onset
         in
-          pure (bandpass_ "ALittleShyBandpass" (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ playBuf_ "ALittleShyBuf" "a-little-shy" 1.0)
+          pure (bandpass_ (tag <> "ALittleShyBandpass") (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ (tag <> "ALittleShyBuf") tag 1.0 (0.6 + 0.6 * sin (time * pi)) (3.248 + 0.6 * sin (time * pi)))
     )
+
+preALittleShyAccomp = alsAccomp "pre-a-little-shy" Sea4 Sea4 :: SigAU
+
+aLittleShyAccomp = alsAccomp "a-little-shy" A5 Shy5 :: SigAU
+
+andSadOfEyeAccomp = alsAccomp "and-sad-of-eye" And5 Eye5 :: SigAU
+
+butVeryWiseWasAccomp = alsAccomp "but-very-wise-was" But6 Was6 :: SigAU
+
+heAccomp = alsAccomp "he" He6 He6 :: SigAU
 
 -- (wah "test" "smooth" 0.4 3 (60.0 : 64.0 : 67.0 : Nil) Nothing 0.2 0.9 0.5 0.5 time)
 bpWah :: Number -> String -> String -> Number -> Int -> List Number -> Maybe Number -> Number -> Number -> Number -> Number -> Number -> List (AudioUnit D2)
@@ -486,6 +496,16 @@ veryWiseWasSkiddaw =
           time = t - onset
         in
           pure (gain_' "skiddawVeryWiseGain" (1.0) (playBuf_ "skiddawVeryWiseBuf" "skiddaw-low-d" 1.0))
+    )
+
+planeLanding :: SigAU
+planeLanding =
+  boundByCueWithOnset He6 He6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gainT_' "planeLandingGain" (epwf [ Tuple 0.0 0.0, Tuple 1.0 1.0, Tuple 1.64 1.0, Tuple 1.7 0.0, Tuple 1.8 1.0, Tuple 2.24 1.0, Tuple 2.3 0.0, Tuple 2.4 1.0, Tuple 2.6 1.0, Tuple 2.65 0.0, Tuple 2.72 1.0, Tuple 2.9 1.0, Tuple 2.94 0.0, Tuple 3.0 1.0, Tuple 3.4 1.0, Tuple 3.42 0.0, Tuple 3.5 1.0, Tuple 3.6 1.0, Tuple 3.62 0.0, Tuple 3.7 1.0 ] time) (playBuf_ "planeLandingBuf" "plane-landing" 1.0))
     )
 
 littleShyHigh :: SigAU
@@ -2131,7 +2151,11 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , snare
               , landEggTimer
               , seaVoice
-              , aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp
+              , preALittleShyAccomp
+              , aLittleShyAccomp
+              , andSadOfEyeAccomp
+              , butVeryWiseWasAccomp
+              , heAccomp
               , littleShyHigh
               , aVoicePedal
               , littleShyVoice
@@ -2144,6 +2168,7 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , veryWiseWasHeWahs
               , veryWiseWasBassoon
               , veryWiseWasSkiddaw
+              , planeLanding
               ]
         )
         acc.currentMarker
@@ -2213,7 +2238,11 @@ main =
         , Tuple "harm-1-50" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad50.ogg"
         , Tuple "harm-1-90" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/fSharpDiadPad90.ogg"
         , Tuple "harm-2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpDSharpDiadPad100.ogg"
-        , Tuple "a-little-shy" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/aLittleShyAndSadOfEyeButVeryWiseWasHe.ogg"
+        , Tuple "pre-a-little-shy" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/preALittleShy.ogg"
+        , Tuple "a-little-shy" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/aLittleShy.ogg"
+        , Tuple "and-sad-of-eye" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andSadOfEye.ogg"
+        , Tuple "but-very-wise-was" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/butVeryWiseWas.ogg"
+        , Tuple "he" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/he.ogg"
         -- snare
         , Tuple "snare-hit" "https://freesound.org/data/previews/100/100393_377011-hq.mp3"
         -- foghorns
@@ -2292,6 +2321,7 @@ main =
         , Tuple "high-g-sharp-guitar" "https://freesound.org/data/previews/153/153984_2626346-hq.mp3"
         , Tuple "e-guitar" "https://freesound.org/data/previews/153/153980_2626346-hq.mp3"
         , Tuple "beautiful-birds" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/birds.ogg"
+        , Tuple "plane-landing" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/planeLanding.ogg"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
