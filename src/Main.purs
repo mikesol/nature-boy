@@ -2294,6 +2294,71 @@ veryStrangeEnchantedBoyComp ac cm _ =
           )
     )
 
+natureBoy =
+  [ there0
+  , was0
+  , a0
+  , boy0
+  , a1
+  , celloVeryStrangeEnchantedDrone
+  , veryStrangeEnchantedBoyComp
+  , veRyStrangeEn
+  , chanTed
+  , boy1
+  , they2
+  , sayHeWandered
+  , theySayHeWanderedCymbal
+  , theyGong
+  , sayGong
+  , heGong
+  , wanGong
+  , deredGong
+  , veRy2
+  , far2
+  , veryFarDrones
+  , ryGongBackwards
+  , farChimes
+  , farShriek
+  , farBirds
+  , harm0
+  , veRy3
+  , far3
+  , harm1
+  , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
+  , guitarSingleton "b" "e-guitar" 0.3 Ry3
+  , harm2
+  , overLandAnd
+  , snare
+  , landEggTimer
+  , seaVoice
+  , preALittleShyAccomp
+  , aLittleShyAccomp
+  , andSadOfEyeAccomp
+  , butVeryWiseWasAccomp
+  , heAccomp
+  , littleShyHigh
+  , aVoicePedal
+  , littleShyVoice
+  , andVoice
+  , sadOfEyeVoice
+  , sadOfEyeHigh
+  , butPedalVoice
+  , veryWiseWasHeVoice
+  , veryWiseWasHeHigh
+  , veryWiseWasHeWahs
+  , veryWiseWasBassoon
+  , veryWiseWasSkiddaw
+  , wasHeGlitches
+  , planeLanding
+  , heRichSwell
+  , scratchySwellHe
+  , wiseWasHeAndClock
+  ----------- pt 2
+  , andPt2Voice
+  ]
+    <> secondPartBP ::
+    Array SigAU
+
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
 scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
   where
@@ -2329,70 +2394,7 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
     players =
       maybe initialV
         ( \mk ->
-            foldl (\{ aus, audAcc } f -> let (Tuple ak au) = f audAcc mk time in { audAcc: ak, aus: au <> aus }) initialV
-              ( [ there0
-                , was0
-                , a0
-                , boy0
-                , a1
-                , celloVeryStrangeEnchantedDrone
-                , veryStrangeEnchantedBoyComp
-                , veRyStrangeEn
-                , chanTed
-                , boy1
-                , they2
-                , sayHeWandered
-                , theySayHeWanderedCymbal
-                , theyGong
-                , sayGong
-                , heGong
-                , wanGong
-                , deredGong
-                , veRy2
-                , far2
-                , veryFarDrones
-                , ryGongBackwards
-                , farChimes
-                , farShriek
-                , farBirds
-                , harm0
-                , veRy3
-                , far3
-                , harm1
-                , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
-                , guitarSingleton "b" "e-guitar" 0.3 Ry3
-                , harm2
-                , overLandAnd
-                , snare
-                , landEggTimer
-                , seaVoice
-                , preALittleShyAccomp
-                , aLittleShyAccomp
-                , andSadOfEyeAccomp
-                , butVeryWiseWasAccomp
-                , heAccomp
-                , littleShyHigh
-                , aVoicePedal
-                , littleShyVoice
-                , andVoice
-                , sadOfEyeVoice
-                , sadOfEyeHigh
-                , butPedalVoice
-                , veryWiseWasHeVoice
-                , veryWiseWasHeHigh
-                , veryWiseWasHeWahs
-                , veryWiseWasBassoon
-                , veryWiseWasSkiddaw
-                , wasHeGlitches
-                , planeLanding
-                , heRichSwell
-                , scratchySwellHe
-                , wiseWasHeAndClock
-                ----------- pt 2
-                , andPt2Voice
-                ]
-                  <> secondPartBP
-              )
+            foldl (\{ aus, audAcc } f -> let (Tuple ak au) = f audAcc mk time in { audAcc: ak, aus: au <> aus }) initialV natureBoy
         )
         acc.currentMarker
 
