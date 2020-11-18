@@ -2285,8 +2285,9 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , planeLanding
               , heRichSwell
               , scratchySwellHe
-              , andPt2Voice
               , wiseWasHeAndClock
+              ----------- pt 2
+              , andPt2Voice
               ]
         )
         acc.currentMarker
