@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpass_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -116,6 +116,10 @@ skewedTriangle01 os len = lcmap (_ % len) go
 
 triangle01 :: Number -> Number -> Number
 triangle01 = skewedTriangle01 0.5
+
+----
+wah :: forall m. Applicative m => String -> String -> Number -> Int -> List Number -> Maybe Number -> Number -> Number -> Number -> Number -> Number -> m (AudioUnit D2)
+wah tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd time = pure (pannerMono_ (tag <> "WahPanner") (panStart + ((panEnd - panStart) * time / len)) ((maybe identity (highpass_ (tag <> "WahHP") 1.0) filt) (gain_ (tag <> "WahGain") (if time >= len then 0.0 else ((gnStart + (gnEnd - gnStart) * time / len) * (triangle01 (len / (toNumber nwahs)) time) / (toNumber $ L.length pitches))) (toNel (L.mapWithIndex (\i p -> periodicOsc_ (tag <> show i) pwave (conv440 p)) pitches)))))
 
 --------------------------------------------
 ---------
@@ -313,14 +317,205 @@ seaVoice =
               }
     )
 
-aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp :: SigAU
-aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp =
-  boundByCueWithOnset A5 And7
+aVoicePedal :: SigAU
+aVoicePedal =
+  boundByCue A5 Of5
+    ( \m t ->
+        pure
+          $ graph_ "aVoicePedalGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "aVoicePedalOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "aVoicePedalCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "aVoicePedalGain" 0.94) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "aVoicePedalDelay" 0.1) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' A5 A5 (pmic "aVoicePedalMic") m
+                  }
+              }
+    )
+
+littleShyVoice :: SigAU
+littleShyVoice =
+  boundByCue Lit5 Shy5
+    ( \m t ->
+        pure
+          $ graph_ "littleShyVoiceGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "littleShyVoiceOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "littleShyVoiceCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "littleShyVoiceGain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "littleShyVoiceDelay" 0.45) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: pmic "littleShyVoiceMic"
+                  }
+              }
+    )
+
+andVoice :: SigAU
+andVoice =
+  boundByCueWithOnset And5 And5
+    ( \ac onset m t ->
+        pure
+          $ graph_ "andVoiceGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "andVoiceOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "andVoiceCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "andVoiceGain" 0.26) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "andVoiceDelay" 0.21) (SProxy :: SProxy "hpf")
+                  , hpf: Tuple (g'highpass_ "andVoiceMic" (500.0 + (3500.0 * (t - onset))) 14.0) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: pmic "andVoiceMic"
+                  }
+              }
+    )
+
+sadOfEyeVoice :: SigAU
+sadOfEyeVoice =
+  boundByCue Sad5 Eye5
+    ( \m t ->
+        pure
+          $ graph_ "sadOfEyeVoiceGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "sadOfEyeVoiceOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "sadOfEyeVoiceCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "sadOfEyeVoiceGain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "sadOfEyeVoiceDelay" 0.45) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: pmic "sadOfEyeVoiceMic"
+                  }
+              }
+    )
+
+butPedalVoice :: SigAU
+butPedalVoice =
+  boundByCue But6 Was6
+    ( \m t ->
+        pure
+          $ graph_ "butPedalVoiceGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "butPedalVoiceOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "butPedalVoiceCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "butPedalVoiceGain" 0.94) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "butPedalVoiceDelay" 0.1) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' But6 But6 (pmic "butPedalVoiceMic") m
+                  }
+              }
+    )
+
+veryWiseWasHeVoice :: SigAU
+veryWiseWasHeVoice =
+  boundByCueWithOnset Ve6 He6
     ( \ac onset m t ->
         let
           time = t - onset
         in
-          pure (bandpass_ "ALittleShyBandpass" (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ "ALittleShyBuf" "scratch" 1.0 0.0 0.0)
+          pure $ dup2 (pmic "butVeryWiseWasHePmic") \d -> (gainT_' "butVeryWiseWasHeDry" (epwf [ Tuple 0.0 1.0, Tuple 4.0 0.2, Tuple 6.0 1.0 ] time) d + (gainT_' "butVeryWiseWasHeWet" (epwf [ Tuple 0.0 0.0, Tuple 4.0 0.8, Tuple 6.0 0.0 ] time) $ convolver_ "veryWiseWasHeVoiceConvolver" "matrix-verb-3" d))
+    )
+
+aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp :: SigAU
+aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp =
+  boundByCueWithOnset Sea4 And7
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (bandpass_ "ALittleShyBandpass" (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ playBuf_ "ALittleShyBuf" "a-little-shy" 1.0)
+    )
+
+-- (wah "test" "smooth" 0.4 3 (60.0 : 64.0 : 67.0 : Nil) Nothing 0.2 0.9 0.5 0.5 time)
+bpWah :: Number -> String -> String -> Number -> Int -> List Number -> Maybe Number -> Number -> Number -> Number -> Number -> Number -> List (AudioUnit D2)
+bpWah t tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd = atT t (boundPlayer (len + 0.3) (wah tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd))
+
+veryWiseWasHeWahs :: SigAU
+veryWiseWasHeWahs =
+  boundByCueWithOnset Ve6 Was6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          fold
+            ( map (\f -> f time)
+                [ bpWah 1.0 "f#" "smooth" 0.3 1 (56.0 : Nil) Nothing 0.3 0.3 0.5 0.5
+                , bpWah 1.4 "e" "rich" 0.3 1 (64.0 : Nil) (Just 3500.0) 0.3 0.3 (-0.5) (-0.5)
+                , bpWah 1.8 "b" "smooth" 0.3 1 (71.0 : Nil) Nothing 0.4 0.4 (0.0) (0.0)
+                , bpWah 2.2 "d#" "rich" 0.2 1 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
+                , bpWah 2.6 "f#" "smooth" 0.5 3 (32.0 : Nil) Nothing 0.3 0.3 0.0 0.0
+                , bpWah 3.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
+                , bpWah 3.5 "e" "rich" 0.3 1 (61.0 : 64.0 : Nil) (Just 3500.0) 0.3 0.3 (-0.5) (-0.5)
+                , bpWah 3.9 "b" "smooth" 0.3 2 (68.0 : 71.0 : Nil) Nothing 0.4 0.4 (0.0) (0.0)
+                , bpWah 4.3 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
+                , bpWah 4.7 "f#" "smooth" 0.5 3 (32.0 : Nil) Nothing 0.3 0.3 0.0 0.0
+                , bpWah 5.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
+                , bpWah 5.5 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
+                , bpWah 5.9 "a#" "rich" 0.2 3 (82.0 : Nil) (Just 4500.0) 0.2 0.2 (0.3) (-0.4)
+                ]
+            )
+    )
+
+veryWiseWasBassoon :: SigAU
+veryWiseWasBassoon =
+  boundByCueWithOnset Ve6 Was6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "bassoonVeryWiseGain" (max 0.0 (1.0 - 0.25 * (t - onset))) (lowpass_ "bassoonVeryWiseLowpass" (50.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
+    )
+
+veryWiseWasSkiddaw :: SigAU
+veryWiseWasSkiddaw =
+  boundByCueWithOnset Ve6 Was6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "skiddawVeryWiseGain" (1.0) (playBuf_ "skiddawVeryWiseBuf" "skiddaw-low-d" 1.0))
+    )
+
+littleShyHigh :: SigAU
+littleShyHigh =
+  boundByCueWithOnset Lit5 Shy5
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          atT 0.4 (boundPlayer 100.0 (const $ pure (gain_' "aLittleShyHighGain" (min (time * 0.3) 1.0) (playBuf_ "aLittleShyHighBuf" "g-sharp-a-sharp-high" 1.0)))) time
+    )
+
+sadOfEyeHigh :: SigAU
+sadOfEyeHigh =
+  boundByCueWithOnset Sad5 Eye5
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          atT 0.3 (boundPlayer 100.0 (const $ pure (gain_' "sadOfEyeHighGain" (min (time * 0.25) 1.0) (playBuf_ "sadOfEyeHighGain" "c-sharp-d-sharp-high" 1.0)))) time
+    )
+
+veryWiseWasHeHigh :: SigAU
+veryWiseWasHeHigh =
+  boundByCueWithOnset Ve6 Was6
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          atT 0.1 (boundPlayer 100.0 (const $ pure (gain_' "veryWiseWasHeGain" (min (time * 0.2) 1.0) (playBuf_ "veryWiseWasHeGain" "g-a-high" 1.0)))) time
     )
 
 a0 :: SigAU
@@ -381,7 +576,7 @@ boyDupedOnset t d =
   pure
     ( mul_ "Boy1Mul"
         ( ( pannerMono_ "Boy1OctavePan" (0.3 * sin (0.8 * pi * t))
-              $ gain_ "Boy1Combined" 1.5
+              $ gain_ "Boy1Combined" (3.5 * (max 0.0 $ 0.5 * (1.0 - t)))
                   ( (periodicOsc_ "Boy1Octave" "smooth" (conv440 61.0))
                       :| (periodicOsc_ "Boy1Octavem3" "smooth" (conv440 64.0))
                       : Nil
@@ -398,15 +593,11 @@ boyDupedOnset t d =
 
 boy1 :: SigAU
 boy1 =
-  boundByCue_ Boy1 Boy1
-    ( \ac m t ->
-        Tuple ac
-          ( pure
-              $ dup2
-                  (pmic "Boy1Mic") \d ->
-                  (gain_ "Boy1Comb" 1.0 (d :| (boyDupedOnset t d)))
-          )
-    )
+  boundByCueWithOnset Boy1 Boy1 \ac onset m t ->
+    pure
+      $ dup2
+          (pmic "Boy1Mic") \d ->
+          (gain_ "Boy1Comb" 1.0 (d :| (boyDupedOnset (t - onset) d)))
 
 they2 :: SigAU
 they2 =
@@ -481,7 +672,7 @@ theySayHeWanderedCymbal =
                 else
                   (maybe 1.0 (\veOnset -> (max 0.0 (1.0 - 0.6 * (t - veOnset)))) (M.lookup Ve2 ac.markerOnsets))
               )
-              (playBuf_ "TheySayHeWanderedCymbalBuffer" "revcym" 1.0)
+              (playBufWithOffset_ "TheySayHeWanderedCymbalBuffer" "revcym" 1.0 0.6)
         in
           if m /= Ve2 then
             pure sound
@@ -617,69 +808,79 @@ harm0Gain t h = if harm0Factory t == h then 1.0 else 0.0
 
 harm0 :: SigAU
 harm0 =
-  boundByCue Ve2 And4
-    ( \m t ->
-        pure
-          $ ( gainT_ "Harm0Gain"
-                ( epwf
-                    [ Tuple 0.0 0.0
-                    , Tuple 1.0 0.0
-                    , Tuple 2.0 0.1
-                    , Tuple 2.2 0.7
-                    , Tuple 2.4 0.1
-                    , Tuple 3.0 0.7
-                    , Tuple 3.1 0.1
-                    , Tuple 3.2 0.6
-                    , Tuple 10.0 0.3
-                    , Tuple 20.0 0.0
-                    ]
-                    t
-                )
-                ( ( gain_' "Harm0--Gain"
-                      (harm0Gain t Harm0'A)
-                      $ playBuf_
-                          "Harm0--Play"
-                          "harm-0"
-                          1.0
-                  )
-                    :| ( gain_' "Harm0-120Gain"
-                          (harm0Gain t Harm0'120)
-                          $ playBuf_
-                              "Harm0-120Play"
-                              "harm-0-120"
-                              1.0
-                      )
-                    : ( gain_' "Harm0-110Gain"
-                          (harm0Gain t Harm0'110)
-                          $ playBuf_
-                              "Harm0-110Play"
-                              "harm-0-110"
-                              1.0
-                      )
-                    : ( gain_' "Harm0-90Gain"
-                          (harm0Gain t Harm0'90)
-                          $ playBuf_
-                              "Harm0-90Play"
-                              "harm-0-90"
-                              1.0
-                      )
-                    : ( gain_' "Harm0-70Gain"
-                          (harm0Gain t Harm0'70)
-                          $ playBuf_
-                              "Harm0-70Play"
-                              "harm-0-70"
-                              1.0
-                      )
-                    : ( gain_' "Harm0-40Gain"
-                          (harm0Gain t Harm0'40)
-                          $ playBuf_
-                              "Harm0-40Play"
-                              "harm-0-40"
-                              1.0
-                      )
-                    : Nil
+  boundByCueWithOnset Ve2 And4
+    ( \ac onset m t'' ->
+        let
+          t' = t'' - onset
+        in
+          atT 0.6
+            ( boundPlayer 100.0
+                ( \t ->
+                    ( pure
+                        ( gainT_ "Harm0Gain"
+                            ( epwf
+                                [ Tuple 0.0 0.0
+                                , Tuple 1.0 0.0
+                                , Tuple 2.0 0.1
+                                , Tuple 2.2 0.7
+                                , Tuple 2.4 0.1
+                                , Tuple 3.0 0.7
+                                , Tuple 3.1 0.1
+                                , Tuple 3.2 0.6
+                                , Tuple 10.0 0.3
+                                , Tuple 20.0 0.0
+                                ]
+                                t
+                            )
+                            ( ( gain_' "Harm0--Gain"
+                                  (harm0Gain t Harm0'A)
+                                  $ playBuf_
+                                      "Harm0--Play"
+                                      "harm-0"
+                                      1.0
+                              )
+                                :| ( gain_' "Harm0-120Gain"
+                                      (harm0Gain t Harm0'120)
+                                      $ playBuf_
+                                          "Harm0-120Play"
+                                          "harm-0-120"
+                                          1.0
+                                  )
+                                : ( gain_' "Harm0-110Gain"
+                                      (harm0Gain t Harm0'110)
+                                      $ playBuf_
+                                          "Harm0-110Play"
+                                          "harm-0-110"
+                                          1.0
+                                  )
+                                : ( gain_' "Harm0-90Gain"
+                                      (harm0Gain t Harm0'90)
+                                      $ playBuf_
+                                          "Harm0-90Play"
+                                          "harm-0-90"
+                                          1.0
+                                  )
+                                : ( gain_' "Harm0-70Gain"
+                                      (harm0Gain t Harm0'70)
+                                      $ playBuf_
+                                          "Harm0-70Play"
+                                          "harm-0-70"
+                                          1.0
+                                  )
+                                : ( gain_' "Harm0-40Gain"
+                                      (harm0Gain t Harm0'40)
+                                      $ playBuf_
+                                          "Harm0-40Play"
+                                          "harm-0-40"
+                                          1.0
+                                  )
+                                : Nil
+                            )
+                        )
+                    )
                 )
             )
+            t'
     )
 
 --- harm1
@@ -708,73 +909,89 @@ harm1Gain t h = if harm1Factory t == h then 1.0 else 0.0
 
 harm1 :: SigAU
 harm1 =
-  boundByCue Ve3 And4
-    ( \m t ->
-        pure
-          $ ( gainT_ "Harm1Gain"
-                ( epwf
-                    [ Tuple 0.0 0.0
-                    , Tuple 1.0 0.8
-                    , Tuple 20.0 0.0
-                    ]
-                    t
-                )
-                ( ( gain_' "Harm1--Gain"
-                      (harm1Gain t Harm1'A)
-                      $ playBuf_
-                          "Harm1--Play"
-                          "harm-1"
-                          1.0
-                  )
-                    :| ( gain_' "Harm1-120Gain"
-                          (harm1Gain t Harm1'120)
-                          $ playBuf_
-                              "Harm1-120Play"
-                              "harm-1-120"
-                              1.0
+  boundByCueWithOnset Ve3 And4
+    ( \ac onset m t'' ->
+        let
+          t' = t'' - onset
+        in
+          atT 0.5
+            ( boundPlayer 100.0
+                ( \t ->
+                    pure
+                      ( gainT_ "Harm1Gain"
+                          ( epwf
+                              [ Tuple 0.0 0.0
+                              , Tuple 1.0 0.8
+                              , Tuple 20.0 0.0
+                              ]
+                              t
+                          )
+                          ( ( gain_' "Harm1--Gain"
+                                (harm1Gain t Harm1'A)
+                                $ playBuf_
+                                    "Harm1--Play"
+                                    "harm-1"
+                                    1.0
+                            )
+                              :| ( gain_' "Harm1-120Gain"
+                                    (harm1Gain t Harm1'120)
+                                    $ playBuf_
+                                        "Harm1-120Play"
+                                        "harm-1-120"
+                                        1.0
+                                )
+                              : ( gain_' "Harm1-90Gain"
+                                    (harm1Gain t Harm1'90)
+                                    $ playBuf_
+                                        "Harm1-90Play"
+                                        "harm-1-90"
+                                        1.0
+                                )
+                              : ( gain_' "Harm1-50Gain"
+                                    (harm1Gain t Harm1'50)
+                                    $ playBuf_
+                                        "Harm1-50Play"
+                                        "harm-1-50"
+                                        1.0
+                                )
+                              : Nil
+                          )
                       )
-                    : ( gain_' "Harm1-90Gain"
-                          (harm1Gain t Harm1'90)
-                          $ playBuf_
-                              "Harm1-90Play"
-                              "harm-1-90"
-                              1.0
-                      )
-                    : ( gain_' "Harm1-50Gain"
-                          (harm1Gain t Harm1'50)
-                          $ playBuf_
-                              "Harm1-50Play"
-                              "harm-1-50"
-                              1.0
-                      )
-                    : Nil
                 )
             )
+            t'
     )
 
 harm2 :: SigAU
 harm2 =
-  boundByCue O4 And4
-    ( \m t ->
-        pure
-          $ ( gainT_ "Harm2Gain"
-                ( epwf
-                    [ Tuple 0.0 0.0
-                    , Tuple 1.0 0.6
-                    , Tuple 20.0 0.0
-                    ]
-                    t
-                )
-                ( ( gain_' "Harm2--Gain"
-                      1.0
-                      $ playBuf_
-                          "Harm2--Play"
-                          "harm-2"
-                          1.0
+  boundByCueWithOnset O4 Shy5
+    ( \ac onset m t'' ->
+        let
+          t' = t'' - onset
+        in
+          atT 0.6
+            ( boundPlayer 21.0 \t ->
+                pure
+                  ( gainT_ "Harm2Gain"
+                      ( epwf
+                          [ Tuple 0.0 0.0
+                          , Tuple 1.0 0.6
+                          , Tuple 20.0 0.0
+                          ]
+                          t
+                      )
+                      ( ( gain_' "Harm2--Gain"
+                            1.0
+                            $ playBuf_
+                                "Harm2--Play"
+                                "harm-2"
+                                1.0
+                        )
+                          :| Nil
+                      )
                   )
-                    :| Nil
-                )
             )
+            t'
     )
 
 landEggTimer :: SigAU
@@ -978,10 +1195,12 @@ farBirds =
                 pure
                   $ ( gain_' ("BirdsAboveC#Gain")
                         (0.3 * (skewedTriangle01 0.5 10.0 t))
-                        ( playBuf_
+                        ( loopBuf_
                             ("BirdsAboveC#Buf")
                             "beautiful-birds"
                             1.0
+                            0.0
+                            0.0
                         )
                     )
             )
@@ -1913,6 +2132,18 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , landEggTimer
               , seaVoice
               , aLittleShyAndSadOfEyeButVeryWiseWasHeAccomp
+              , littleShyHigh
+              , aVoicePedal
+              , littleShyVoice
+              , andVoice
+              , sadOfEyeVoice
+              , sadOfEyeHigh
+              , butPedalVoice
+              , veryWiseWasHeVoice
+              , veryWiseWasHeHigh
+              , veryWiseWasHeWahs
+              , veryWiseWasBassoon
+              , veryWiseWasSkiddaw
               ]
         )
         acc.currentMarker
@@ -1959,7 +2190,18 @@ main =
         , Tuple "kettle-c-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleC4.ogg"
         , Tuple "kettle-e-flat-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleEFlat4.ogg"
         , Tuple "kettle-f-sharp-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleFSharp4.ogg"
+        -- impulses
+        , Tuple "matrix-verb-3" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb3.wav"
         -- harmonic stuff
+        ------- interj
+        , Tuple "g-sharp-a-sharp-high" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/gSharpASharpInterjection.ogg"
+        , Tuple "c-sharp-d-sharp-high" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpDSharpInterjection.ogg"
+        , Tuple "g-a-high" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/gAInterjection.ogg"
+        --------------- low d
+        , Tuple "bassoon-low-d" "https://freesound.org/data/previews/154/154331_2626346-hq.mp3"
+        , Tuple "low-guitar-d" "https://freesound.org/data/previews/117/117675_646701-hq.mp3"
+        , Tuple "skiddaw-low-d" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/skiddawLowD.ogg"
+        --------------- harm
         , Tuple "harm-0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad.ogg"
         , Tuple "harm-0-120" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad120.ogg"
         , Tuple "harm-0-110" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad110.ogg"
@@ -2049,7 +2291,7 @@ main =
         , Tuple "middle-g-sharp-guitar" "https://freesound.org/data/previews/154/154013_2626346-hq.mp3"
         , Tuple "high-g-sharp-guitar" "https://freesound.org/data/previews/153/153984_2626346-hq.mp3"
         , Tuple "e-guitar" "https://freesound.org/data/previews/153/153980_2626346-hq.mp3"
-        , Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-hq.mp3"
+        , Tuple "beautiful-birds" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/birds.ogg"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
