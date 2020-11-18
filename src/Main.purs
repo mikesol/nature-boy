@@ -98,6 +98,9 @@ boundByCueNac''' st ed f m = boundByCueNac_ st ed (\_ _ -> f) m 0.0
 conv440 :: Number -> Number
 conv440 i = 440.0 * (2.0 `pow` ((i - 69.0) / 12.0))
 
+conv1 :: Number -> Number
+conv1 i = 1.0 * (2.0 `pow` ((i - 0.0) / 12.0))
+
 atT :: forall a. Number -> (Number -> a) -> (Number -> a)
 atT t = lcmap (_ - t)
 
@@ -1387,6 +1390,105 @@ snare =
               }
     )
 
+bassLick :: String -> Number -> Number -> SigAU
+bassLick tag os p = bassplz Kings10 This11 os tag 1.0 0.2 0.1 5.0 (lowpass_ "kings-bp" 250.0 10.0) 0.3 false (const $ conv1 p)
+
+thisHeSaidToMeLicks :: String -> Int -> Marker -> Marker -> Array SigAU
+thisHeSaidToMeLicks tag n st ed =
+  map
+    ( \i ->
+        let tni = toNumber i in bassplz st ed (tni * 1.6 / tnn) (show i <> tag) (if i < 4 then 0.7 + tni * 0.1 else 1.3 - tni * 0.1) 0.2 0.3 (4.0 + tni * 0.4) identity 0.3 false (const $ conv1 (-4.0) + (conv1 11.0 - conv1 (-4.0)) * tni / (tnn - 1.0))
+    )
+    (range 0 (n - 1))
+  where
+  tnn = toNumber n
+
+-- start with c#
+secondPartBP =
+  [ bassplz Then7 Day7 0.0 "first-C#" 1.0 0.37 0.7 0.0 identity 0.3 false (const $ conv1 0.0)
+  -- glitch of c#, smaller
+  , bassplz One7 One7 0.1 "C#-echo" 0.5 0.04 0.3 4.0 (highpass_ "glitch-c#" 300.0 1.0) 0.1 false (const $ conv1 0.0)
+  -- g#
+  , bassplz Day7 One8 0.1 "G#" 1.0 0.27 0.7 0.0 identity 0.3 false (const $ conv1 (-5.0))
+  -- e
+  , bassplz Day7 One8 0.7 "E" 1.0 0.34 0.7 0.0 identity 0.3 false (const $ conv1 (3.0))
+  , bassplz Ma8 Gic8 0.0 "B" 1.0 0.37 0.7 0.0 identity 0.3 false (const $ conv1 (-2.0))
+  , bassplz Gic8 Day8 0.0 "C#" 1.0 0.11 0.5 0.0 identity 0.3 false (const $ conv1 (0.0))
+  , bassplz Day8 He8 0.0 "D#" 1.0 0.30 0.7 0.0 (lowpass_ "lpD#" 400.0 1.0) 0.3 false (const $ conv1 (2.0))
+  -- d# glitch
+  , bassplz He8 He8 0.0 "D#-glitch" 0.4 0.06 0.3 0.0 (highpass_ "lpD#" 1000.0 1.0) 0.06 false (const $ conv1 (2.0))
+  , bassplz Passed8 Way8 0.0 "D#-bold" 1.0 0.4 0.9 6.0 identity 0.35 false (const $ conv1 (2.0))
+  , bassplz My8 My8 0.0 "D#-bkwrd" 0.2 0.1 0.3 6.0 identity 0.35 true (const $ conv1 (2.0))
+  , bassplz Way8 Way8 0.0 "A-start" 1.0 0.34 0.5 0.0 identity 0.3 false (const $ conv1 (-4.0))
+  , bassplz Way8 Way8 3.2 "D#-wink" 0.7 0.1 0.5 7.0 identity 0.12 false (const $ conv1 (2.0))
+  , bassplz Way8 Way8 3.4 "A-wink" 0.7 0.08 0.5 8.0 identity 0.1 true (const $ conv1 (-4.0))
+  , bassplz And9 While9 0.0 "C#-awwso" 1.0 0.3 0.7 0.0 identity 0.3 false (const $ conv1 (0.0))
+  , bassplz While9 We9 0.0 "D#-awwso" 1.0 0.25 0.6 0.0 identity 0.3 false (const $ conv1 (2.0))
+  , bassplz We9 Spoke9 0.0 "A-awwso" 1.0 0.21 0.55 0.0 identity 0.3 false (const $ conv1 (-4.0))
+  , bassplz Spoke9 Of9 0.0 "G#-awwso" 1.0 0.43 0.7 0.0 identity 0.3 false (const $ conv1 (-5.0))
+  , bassplz Of9 Ma9 0.0 "F#-awwso" 1.0 0.32 0.7 3.45 identity 0.3 false (const $ conv1 (-7.0))
+  , bassplz Ma9 Ny9 0.0 "E-mnt" 1.0 0.36 0.7 1.2 identity 0.3 false (const $ conv1 (-9.0))
+  , bassplz Ny9 Things9 0.0 "G#-mnt" 1.0 0.45 0.8 5.1 identity 0.3 false \t ->
+      let
+        st = conv1 (-6.2)
+
+        ed = conv1 (-5.0)
+      in
+        min ed (st + (ed - st) * t * 3.0)
+  , bassplz Things9 Fools10 0.0 "C#-mnt" 1.0 0.6 0.9 8.3 identity 0.3 false \t ->
+      let
+        st = conv1 (-0.8)
+
+        ed = conv1 (0.0)
+      in
+        min ed (st + (ed - st) * t * 1.5)
+  , bassplz Things9 To11 2.0 "C#-pedal" 2.0 0.9 0.9 0.0 (lowpass_ "many-things-pedal" 300.0 1.0) 0.4 false (const $ conv1 (-12.0))
+  , bassplz Fools10 And10 0.0 "fools-F#" 1.0 0.37 0.7 9.0 (bandpass_ "fools-bp" (conv440 44.0) 3.0) 0.3 false (const $ conv1 (-7.0))
+  , bassplz And10 Kings10 0.0 "and-C#" 1.0 0.37 0.7 10.0 (bandpass_ "and-bp" (conv440 51.0) 3.0) 0.3 false (const $ conv1 0.0)
+  , bassplz Kings10 This11 0.0 "kings-F#" 1.0 0.43 0.7 5.0 (bandpass_ "kings-bp" (conv440 56.0) 3.0) 0.3 false (const $ conv1 5.0)
+  -----
+  , bassLick "lick-0" 2.7 (-9.0)
+  , bassLick "lick-1" 2.9 (-4.0)
+  , bassLick "lick-2" 3.1 (-5.0)
+  , bassLick "lick-3" 3.3 (1.0)
+  , bassLick "lick-4" 3.47 (-6.0)
+  , bassLick "lick-5" 3.64 (-7.0)
+  , bassLick "lick-6" 3.59 (-1.0)
+  , bassLick "lick-7" 3.71 (-2.0)
+  , bassLick "lick-8" 3.8 (-8.0)
+  ]
+    <> thisHeSaidToMeLicks "ladder-0" 4 This11 He11
+    <> thisHeSaidToMeLicks "ladder-1-" 5 He11 Said11
+    <> thisHeSaidToMeLicks "ladder-2-" 7 Said11 To11
+    <> thisHeSaidToMeLicks "ladder-3-" 11 To11 To11 ::
+    Array SigAU
+
+bassplz :: Marker -> Marker -> Number -> String -> Number -> Number -> Number -> Number -> (AudioUnit D2 -> AudioUnit D2) -> Number -> Boolean -> (Number -> Number) -> SigAU
+bassplz st ed startsAt tag globalGain del gn os filt kink backwards rate =
+  boundByCueWithOnset st ed \ac onset m t ->
+    let
+      time = t - onset - startsAt
+    in
+      if time < 0.0 then
+        Nil
+      else
+        ( pure $ gain_' (tag <> "bassPlzFader") globalGain
+            $ graph_ (tag <> "bassPlzGraph")
+                { aggregators:
+                    { out: Tuple (g'add_ (tag <> "bassPlzOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+                    , combine: Tuple (g'add_ (tag <> "bassPlzCombine")) (SLProxy :: SLProxy ("gain" :/ "bass" :/ SNil))
+                    , gain: Tuple (g'gain_ (tag <> "bassPlzGain") gn) (SLProxy :: SLProxy ("del" :/ SNil))
+                    }
+                , processors:
+                    { del: Tuple (g'delay_ (tag <> "bassPlzDelay") del) (SProxy :: SProxy "combine")
+                    }
+                , generators:
+                    { bass:
+                        (gainT_' (tag <> "bassPlzImpulse") (if backwards then (epwf [ Tuple 0.0 0.0, Tuple (1.0 - kink) 0.1, Tuple 1.0 1.0, Tuple 1.06 0.0 ] time) else (epwf [ Tuple 0.0 1.0, Tuple kink 0.1, Tuple 1.0 0.0 ] time)) $ filt (playBufWithOffset_ (tag <> "bassPlzBuf") "bassplz" (rate time) os))
+                    }
+                }
+        )
+
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
 compVeryStrangeEnchantedBoy Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
@@ -2228,67 +2330,69 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
       maybe initialV
         ( \mk ->
             foldl (\{ aus, audAcc } f -> let (Tuple ak au) = f audAcc mk time in { audAcc: ak, aus: au <> aus }) initialV
-              [ there0
-              , was0
-              , a0
-              , boy0
-              , a1
-              , celloVeryStrangeEnchantedDrone
-              , veryStrangeEnchantedBoyComp
-              , veRyStrangeEn
-              , chanTed
-              , boy1
-              , they2
-              , sayHeWandered
-              , theySayHeWanderedCymbal
-              , theyGong
-              , sayGong
-              , heGong
-              , wanGong
-              , deredGong
-              , veRy2
-              , far2
-              , veryFarDrones
-              , ryGongBackwards
-              , farChimes
-              , farShriek
-              , farBirds
-              , harm0
-              , veRy3
-              , far3
-              , harm1
-              , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
-              , guitarSingleton "b" "e-guitar" 0.3 Ry3
-              , harm2
-              , overLandAnd
-              , snare
-              , landEggTimer
-              , seaVoice
-              , preALittleShyAccomp
-              , aLittleShyAccomp
-              , andSadOfEyeAccomp
-              , butVeryWiseWasAccomp
-              , heAccomp
-              , littleShyHigh
-              , aVoicePedal
-              , littleShyVoice
-              , andVoice
-              , sadOfEyeVoice
-              , sadOfEyeHigh
-              , butPedalVoice
-              , veryWiseWasHeVoice
-              , veryWiseWasHeHigh
-              , veryWiseWasHeWahs
-              , veryWiseWasBassoon
-              , veryWiseWasSkiddaw
-              , wasHeGlitches
-              , planeLanding
-              , heRichSwell
-              , scratchySwellHe
-              , wiseWasHeAndClock
-              ----------- pt 2
-              , andPt2Voice
-              ]
+              ( [ there0
+                , was0
+                , a0
+                , boy0
+                , a1
+                , celloVeryStrangeEnchantedDrone
+                , veryStrangeEnchantedBoyComp
+                , veRyStrangeEn
+                , chanTed
+                , boy1
+                , they2
+                , sayHeWandered
+                , theySayHeWanderedCymbal
+                , theyGong
+                , sayGong
+                , heGong
+                , wanGong
+                , deredGong
+                , veRy2
+                , far2
+                , veryFarDrones
+                , ryGongBackwards
+                , farChimes
+                , farShriek
+                , farBirds
+                , harm0
+                , veRy3
+                , far3
+                , harm1
+                , guitarSingleton "a" "middle-g-sharp-guitar" 0.5 Ve3
+                , guitarSingleton "b" "e-guitar" 0.3 Ry3
+                , harm2
+                , overLandAnd
+                , snare
+                , landEggTimer
+                , seaVoice
+                , preALittleShyAccomp
+                , aLittleShyAccomp
+                , andSadOfEyeAccomp
+                , butVeryWiseWasAccomp
+                , heAccomp
+                , littleShyHigh
+                , aVoicePedal
+                , littleShyVoice
+                , andVoice
+                , sadOfEyeVoice
+                , sadOfEyeHigh
+                , butPedalVoice
+                , veryWiseWasHeVoice
+                , veryWiseWasHeHigh
+                , veryWiseWasHeWahs
+                , veryWiseWasBassoon
+                , veryWiseWasSkiddaw
+                , wasHeGlitches
+                , planeLanding
+                , heRichSwell
+                , scratchySwellHe
+                , wiseWasHeAndClock
+                ----------- pt 2
+                , andPt2Voice
+                ]
+                  <> secondPartBP
+              )
         )
         acc.currentMarker
 
@@ -2390,8 +2494,7 @@ main =
         --, Tuple "ethereal" "https://freesound.org/data/previews/352/352944_6523136-hq.mp3"
         ------------------------- THIS IS OUR BASS SOUND
         ------------------------- FOR THE SECOND PART
-        --, Tuple "swelling-low" "https://freesound.org/data/previews/119/119059_181941-hq.mp3"
-        -- yes
+        , Tuple "bassplz" "https://freesound.org/data/previews/119/119059_181941-hq.mp3"
         , Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-hq.mp3"
         --, Tuple "low-deep" "https://freesound.org/data/previews/350/350660_1676145-hq.mp3"
         --, Tuple "knock-pad" "https://freesound.org/data/previews/7/7402_1629-hq.mp3"
