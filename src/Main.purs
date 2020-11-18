@@ -207,6 +207,11 @@ there0 =
   boundByCue There0 There0
     (\m t -> pure (pmic "There0Mic"))
 
+andPt2Voice :: SigAU
+andPt2Voice =
+  boundByCue And7 And7
+    (\m t -> pure (pmic "And7Mic"))
+
 was0 :: SigAU
 was0 =
   boundByCue Was0 Boy0
@@ -506,6 +511,16 @@ veryWiseWasSkiddaw =
           time = t - onset
         in
           pure (gain_' "skiddawVeryWiseGain" (1.0) (playBuf_ "skiddawVeryWiseBuf" "skiddaw-low-d" 1.0))
+    )
+
+wiseWasHeAndClock :: SigAU
+wiseWasHeAndClock =
+  boundByCueWithOnset Wise6 And7
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "wiseWasHeAndClockGain" (min 1.0 (0.1 * time)) (loopBuf_ "wiseWasHeAndClockBuf" "wall-clock" 1.0 0.0 0.0))
     )
 
 planeLanding :: SigAU
@@ -2270,6 +2285,8 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
               , planeLanding
               , heRichSwell
               , scratchySwellHe
+              , andPt2Voice
+              , wiseWasHeAndClock
               ]
         )
         acc.currentMarker
@@ -2429,6 +2446,7 @@ main =
         , Tuple "e-guitar" "https://freesound.org/data/previews/153/153980_2626346-hq.mp3"
         , Tuple "beautiful-birds" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/birds.ogg"
         , Tuple "plane-landing" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/planeLanding.ogg"
+        , Tuple "wall-clock" "https://freesound.org/data/previews/188/188615_3330286-lq.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
