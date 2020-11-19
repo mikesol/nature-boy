@@ -2779,7 +2779,7 @@ slowDrumSecondPart =
         let
           time = t - onset
         in
-          pure (gain_' "skiddawVeryWiseGain" (max 0.0 (0.8 - (time * 0.05))) (lowpass_ "then-one-day-lp" 170.0 5.0 (playBuf_ "skiddawVeryWiseBuf" "slow-drum-pattern" (0.8 - ((time * 0.2) % 0.1)))))
+          pure (gain_' "skiddawVeryWiseGain" (max 0.0 (0.8 - (time * 0.1))) (lowpass_ "then-one-day-lp" 170.0 5.0 (playBuf_ "skiddawVeryWiseBuf" "slow-drum-pattern" (0.8 - ((time * 0.2) % 0.1)))))
     )
 
 natureBoy =
