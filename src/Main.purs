@@ -948,50 +948,59 @@ theySayHeWanderedCymbalFragment st ed olfq =
     )
 
 theySayHeWanderedBuildup =
-  [ theySayHeWanderedCymbalFragment They2 Say2 []
-  , theySayHeWanderedCymbalFragment Say2 He2 []
-  , theySayHeWanderedCymbalFragment He2 Wan2 []
-  , theySayHeWanderedCymbalFragment Wan2 Dered2 []
-  , theySayHeWanderedCymbalFragment Dered2 Ve2 []
-  , theySayHeWanderedCymbalFragment Ve2 Ry2 []
-  , theySayHeWanderedCymbalFragment Ry2 Far2 []
-  , theySayHeWanderedCymbalFragment Far2 Ve3 []
+  [ theySayHeWanderedCymbalFragment They2 Say2
+      [ AOLFQ 0.0 0.8 0.8 1000.0 3.0
+      , AOLFQ 0.6 1.4 0.5 500.0 2.0
+      , AOLFQ 0.9 1.5 0.6 1500.0 6.0
+      , AOLFQ 1.3 1.0 0.3 700.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment Say2 He2
+      [ AOLFQ 0.0 1.2 0.8 1000.0 3.0
+      , AOLFQ 0.5 1.4 0.5 500.0 2.0
+      , AOLFQ 0.9 2.0 0.6 1500.0 6.0
+      , AOLFQ 1.4 1.7 1.0 700.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment He2 Wan2
+      [ AOLFQ 0.0 1.6 0.8 1000.0 3.0
+      , AOLFQ 0.4 2.3 0.5 500.0 2.0
+      , AOLFQ 0.8 2.6 0.7 1500.0 6.0
+      , AOLFQ 1.2 2.5 0.5 700.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment Wan2 Dered2
+      [ AOLFQ 0.0 2.3 0.8 1000.0 3.0
+      , AOLFQ 0.35 3.3 0.5 500.0 2.0
+      , AOLFQ 0.7 4.2 0.6 1500.0 6.0
+      , AOLFQ 1.05 3.1 0.3 2800.0 8.0
+      , AOLFQ 1.2 4.5 0.4 700.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment Dered2 Ve2
+      [ AOLFQ 0.0 4.8 0.8 1600.0 7.0
+      , AOLFQ 0.3 5.1 0.5 500.0 2.0
+      , AOLFQ 0.6 5.9 0.15 3000.0 6.0
+      , AOLFQ 0.9 5.5 0.5 300.0 2.0
+      , AOLFQ 1.2 5.8 0.3 2000.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment Ve2 Ry2
+      [ AOLFQ 0.0 4.8 0.8 1600.0 7.0
+      , AOLFQ 0.3 4.7 0.5 500.0 2.0
+      , AOLFQ 0.6 4.2 0.15 3000.0 6.0
+      , AOLFQ 0.9 4.8 0.5 300.0 2.0
+      , AOLFQ 1.2 3.9 0.3 1500.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment Ry2 Far2
+      [ AOLFQ 0.0 2.3 0.8 1000.0 3.0
+      , AOLFQ 0.6 3.3 0.5 500.0 2.0
+      , AOLFQ 0.9 4.2 0.6 1500.0 6.0
+      , AOLFQ 1.2 3.1 0.3 700.0 4.0
+      ]
+  , theySayHeWanderedCymbalFragment Far2 Ve3
+      [ AOLFQ 0.0 1.2 0.8 1000.0 3.0
+      , AOLFQ 0.6 1.4 0.5 500.0 2.0
+      , AOLFQ 0.9 2.0 0.6 1500.0 6.0
+      , AOLFQ 1.2 1.7 0.3 700.0 4.0
+      ]
   ] ::
     Array SigAU
-
-theySayHeWanderedCymbal :: SigAU
-theySayHeWanderedCymbal =
-  boundByCueWithOnset They2 Ve2
-    ( \ac onset m t ->
-        let
-          sound =
-            gain_'
-              "TheySayHeWanderedCymbalGain"
-              ( if m /= Ve2 then
-                  1.0
-                else
-                  (maybe 1.0 (\veOnset -> (max 0.0 (1.0 - 0.6 * (t - veOnset)))) (M.lookup Ve2 ac.markerOnsets))
-              )
-              (playBufWithOffset_ "TheySayHeWanderedCymbalBuffer" "revcym" 1.0 0.6)
-        in
-          if m /= Ve2 then
-            pure sound
-          else
-            pure
-              $ graph_ "TheySayHeWanderedCymbalGraph"
-                  { aggregators:
-                      { out: Tuple (g'add_ "TheySayHeWanderedCymbalOut") (SLProxy :: SLProxy ("combine" :/ SNil))
-                      , combine: Tuple (g'add_ "TheySayHeWanderedCymbalCombine") (SLProxy :: SLProxy ("gain" :/ "revcym" :/ SNil))
-                      , gain: Tuple (g'gain_ "TheySayHeWanderedCymbalDelayGain" 0.6) (SLProxy :: SLProxy ("del" :/ SNil))
-                      }
-                  , processors:
-                      { del: Tuple (g'delay_ "TheySayHeWanderedCymbalDelay" 0.2) (SProxy :: SProxy "combine")
-                      }
-                  , generators:
-                      { revcym: sound
-                      }
-                  }
-    )
 
 boundLowGSharpCello :: String -> Number -> List (AudioUnit D2)
 boundLowGSharpCello s = boundPlayer 3.1 (map pure (singleLowGSharpCello s))
@@ -2763,6 +2772,16 @@ thisHeSaidTo =
           pure $ dup2 (pmic "thisHeSaidToPmic") \d -> (gainT_' "thisHeSaidToDry" (epwf [ Tuple 0.0 0.0, Tuple 4.0 1.0 ] time) d + (gainT_' "thisHeSaidToWeT" (epwf [ Tuple 0.0 1.0, Tuple 4.0 0.0 ] time) $ convolver_ "veryWiseWasHeVoiceConvolver" "matrix-verb-5" d))
     )
 
+slowDrumSecondPart :: SigAU
+slowDrumSecondPart =
+  boundByCueWithOnset Then7 Ma9
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "skiddawVeryWiseGain" (max 0.0 (0.8 - (time * 0.05))) (lowpass_ "then-one-day-lp" 170.0 5.0 (playBuf_ "skiddawVeryWiseBuf" "slow-drum-pattern" (0.8 - ((time * 0.2) % 0.1)))))
+    )
+
 natureBoy =
   [ there0
   , was0
@@ -2823,6 +2842,7 @@ natureBoy =
   , wiseWasHeAndClock
   ----------- pt 2
   , andPt2Voice
+  , slowDrumSecondPart
   , bassGlitch1
   , bassGlitch2
   , bassManyThings
@@ -2943,6 +2963,8 @@ main =
         , Tuple "siren" "https://freesound.org/data/previews/534/534550_11837619-hq.mp3"
         -- revcym
         , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
+        -- drumz
+        , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.ogg"
         -- gamelan
         , Tuple "kettle-g-sharp-3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleGSharp3.ogg"
         , Tuple "kettle-a-3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleA3.ogg"
