@@ -8,7 +8,7 @@ import Data.Array (catMaybes, filter, head, index, length, mapWithIndex, range)
 import Data.Either (either)
 import Data.Foldable (fold, foldl, traverse_)
 import Data.Int (floor, toNumber)
-import Data.Lens (_2, over)
+import Data.Lens (_2, over, traversed)
 import Data.List (List(..), (:))
 import Data.List as L
 import Data.Map as M
@@ -24,16 +24,17 @@ import Data.Typelevel.Num (D1, D2)
 import Data.Vec ((+>), empty)
 import Effect (Effect)
 import Effect.Aff (Aff, Milliseconds(..), delay, try)
+import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker, waveShaper_)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
 import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
-import Math (cos, pi, pow, sin, (%))
+import Math (abs, cos, pi, pow, sin, (%))
 import Record.Extra (SLProxy(..), SNil)
 import Type.Data.Graph (type (:/))
 import Type.Klank.Dev (Klank', affable, defaultEngineInfo, klank)
@@ -208,6 +209,38 @@ makeBuffersKeepingCache = makeBuffersUsingCache <<< Tuple
 type SigAU
   = NatureBoyAccumulator -> Marker -> Number -> Tuple NatureBoyAccumulator (List (AudioUnit D2))
 
+harmDel :: String -> Number -> Number -> Number -> AudioUnit D2 -> AudioUnit D2
+harmDel tag l g t m =
+  gain_ (tag <> "harmDelGlobal") 1.0
+    ( ( gainT_' (tag <> "harmDelG0")
+          ( epwf
+              [ Tuple 0.0 0.0
+              , Tuple 0.06 0.0
+              , Tuple 0.5 1.0
+              , Tuple 0.94 0.0
+              , Tuple 1.0 0.0
+              ]
+              (t % 1.0)
+          )
+          (delay_ (tag <> "harmDelD0") ((l + 0.1) - l * (t % 1.0)) (gain_' (tag <> "harmDelGInner0") g m))
+      )
+        :| ( delay_ (tag <> "harmDelD1") 0.5
+              ( gainT_' (tag <> "harmDelG1")
+                  ( epwf
+                      [ Tuple 0.0 0.0
+                      , Tuple 0.06 0.0
+                      , Tuple 0.5 1.0
+                      , Tuple 0.94 0.0
+                      , Tuple 1.0 0.0
+                      ]
+                      (t % 1.0)
+                  )
+                  (delay_ (tag <> "harmDelD2") ((l + 0.1) - l * (t % 1.0)) (gain_' (tag <> "harmDelGInner1") g m))
+              )
+          )
+        : Nil
+    )
+
 there0 :: SigAU
 there0 =
   boundByCue There0 There0
@@ -261,6 +294,66 @@ was0 =
                   }
               , generators:
                   { mic: boundByCueNac''' Was0 Was0 (pmic "Was0Mic") m
+                  }
+              }
+    )
+
+theGreatestThingYoullEverLearnIsJustToLove :: SigAU
+theGreatestThingYoullEverLearnIsJustToLove =
+  boundByCue The12 Love13
+    ( \m t ->
+        pure
+          $ graph_ "theGreatestThingYoullEverLearnIsJustToLoveGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "theGreatestThingYoullEverLearnIsJustToLoveOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "theGreatestThingYoullEverLearnIsJustToLoveCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "theGreatestThingYoullEverLearnIsJustToLoveGain" 0.65) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "theGreatestThingYoullEverLearnIsJustToLoveDelay" 0.31) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: (pmic "theGreatestThingYoullEverLearnIsJustToLoveMic")
+                  }
+              }
+    )
+
+beLovedInReturn :: SigAU
+beLovedInReturn =
+  boundByCue Be13 Turn13
+    ( \m t ->
+        pure
+          $ graph_ "beLovedInReturnGraph"
+              { aggregators:
+                  { out: Tuple (g'add_ "beLovedInReturnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "beLovedInReturnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "beLovedInReturnGain" 0.48) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "beLovedInReturnDelay" 0.43) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: (pmic "beLovedInReturnMic")
+                  }
+              }
+    )
+
+meBeforeGreatest :: SigAU
+meBeforeGreatest =
+  boundByCue Me11 The12
+    ( \m t ->
+        pure
+          $ graph_ "Me11Graph"
+              { aggregators:
+                  { out: Tuple (g'add_ "Me11Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ "Me11Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ "Me11Gain" 0.9) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ "Me11Delay" 0.23) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' Me11 Me11 (pmic "Me11Mic") m
                   }
               }
     )
@@ -824,6 +917,47 @@ wanGong = boundByCueWithOnset Wan2 Ve3 \ac onset m t -> let time = t - onset in 
 
 deredGong :: SigAU
 deredGong = boundByCueWithOnset Dered2 Ry3 \ac onset m t -> let time = t - onset in (atT 0.2 $ overZeroPlayer (const $ pure (playBuf_ ("Dered2GongPlayer") "kettle-f-sharp-4" 1.0))) time
+
+-- at offset length freq q
+data AOLFQ
+  = AOLFQ Number Number Number Number Number
+
+theySayHeWanderedCymbalFragment :: Marker -> Marker -> Array AOLFQ -> SigAU
+theySayHeWanderedCymbalFragment st ed olfq =
+  boundByCueWithOnset st ed
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          fold
+            ( map
+                ( \(AOLFQ a o l f q) ->
+                    ( atT a
+                        $ boundPlayer (l + 0.06)
+                            ( \tm ->
+                                pure
+                                  ( gainT_' (show a <> m2s st <> "theySayGain") (epwf [ Tuple 0.0 0.0, Tuple 1.0 l ] tm)
+                                      (highpass_ (show a <> m2s st <> "theySayHP") f q $ playBufWithOffset_ (show a <> m2s st <> "theySayBuf") "revcym" 1.0 o)
+                                  )
+                            )
+                    )
+                      time
+                )
+                olfq
+            )
+    )
+
+theySayHeWanderedBuildup =
+  [ theySayHeWanderedCymbalFragment They2 Say2 []
+  , theySayHeWanderedCymbalFragment Say2 He2 []
+  , theySayHeWanderedCymbalFragment He2 Wan2 []
+  , theySayHeWanderedCymbalFragment Wan2 Dered2 []
+  , theySayHeWanderedCymbalFragment Dered2 Ve2 []
+  , theySayHeWanderedCymbalFragment Ve2 Ry2 []
+  , theySayHeWanderedCymbalFragment Ry2 Far2 []
+  , theySayHeWanderedCymbalFragment Far2 Ve3 []
+  ] ::
+    Array SigAU
 
 theySayHeWanderedCymbal :: SigAU
 theySayHeWanderedCymbal =
@@ -2428,11 +2562,206 @@ then7Filt t =
     ]
     t
 
-secondPartVocals =
+passed8Filt :: Filt
+passed8Filt =
+  filtLtoFiltF 0.195
+    [ bandpass_ "bandpassPassed8" 900.0 0.0
+    , highpass_ "highpassPassed8" 3000.0 7.0
+    , notch_ "notchPassed8" 120.0 0.0
+    , lowpass_ "lowpassPassed8" 100.0 7.0
+    , lowshelf_ "lowshelfPassed8" 1818.0 7.0
+    ]
+
+and13Filt :: Filt
+and13Filt =
+  filtLtoFiltF 0.14
+    [ bandpass_ "bandpassPassed8" 900.0 0.0
+    , highpass_ "highpassPassed8" 3000.0 7.0
+    , lowpass_ "lowpassPassed8" 100.0 7.0
+    ]
+
+foolsFilt :: Filt
+foolsFilt =
+  filtLtoFiltF 0.195
+    [ bandpass_ "fools-0-filt" 200.0 7.0
+    , bandpass_ "fools-1-filt" 600.0 7.0
+    , bandpass_ "fools-2-filt" 1200.0 7.0
+    , bandpass_ "fools-3-filt" 1500.0 7.0
+    ]
+
+foolsVoice :: SigAU
+foolsVoice = boundByCueWithOnset Fools10 Fools10 \_ onset _ t -> let time = t - onset in pure (foolsFilt time (pmic "foolsMic"))
+
+and13Voice :: SigAU
+and13Voice = boundByCueWithOnset And13 And13 \_ onset _ t -> let time = t - onset in pure (and13Filt time (pmic "and13Mic"))
+
+secondPartVocalsUsingRig =
   [ secondPartVocalRig "then-7-voice" Then7 One7 then7Filt
-  , secondPartVocalRig "one-7-voice" One7 Day7 (const (genericFB "one-7-outter" 0.07 0.3 <<< genericFB "one-7-middle" 0.1 0.3 <<< genericFB "one-7-inner" 0.05 0.13))
+  , secondPartVocalRig "one-7-voice" One7 Day7
+      ( const
+          $ genericFB "one-7-outter" 0.07 0.3
+          <<< genericFB "one-7-middle" 0.1 0.3
+          <<< genericFB "one-7-inner" 0.05 0.13
+      )
+  , secondPartVocalRig "day-7-voice" Day7 One8 (\t -> genericFB "day-7-outter" 0.4 0.6 <<< waveShaper_ "wave-shaper-day" "wicked" (if t % 1.0 < 0.5 then TwoX else FourX))
+  , secondPartVocalRig "one-8-voice" One8 Ma8
+      ( const
+          $ genericFB "one-8-outter" 0.2 0.4
+          <<< genericFB "one-9-middle" 0.14 0.3
+      )
+  , secondPartVocalRig "ma-8-voice" Ma8 Gic8 (\t -> gain_' "ma-8-gain" (0.55 + 0.4 * sin (pi * t * 7.0)))
+  , secondPartVocalRig "gic-8-voice" Gic8 Day8 (\t -> highpass_ "gic-8-hp" (max 300.0 $ 4000.0 - (t * pi * 4000.0)) 10.4)
+  , secondPartVocalRig "day-8-voice" Day8 He8 (\t -> lowpass_ "gic-8-hp" (400.0 + (-350.0) * cos (t * pi * 3.0)) 10.4)
+  , secondPartVocalRig "he-8-voice" He8 Passed8 (const identity)
+  , secondPartVocalRig "passed-7-voice" Passed8 My8 passed8Filt
+  , secondPartVocalRig "my-8-voice" My8 Way8
+      ( const
+          $ genericFB "my-8-outter" 0.07 0.3
+          <<< genericFB "my-8-middle" 0.1 0.3
+          <<< genericFB "my-8-inner" 0.05 0.13
+      )
+  , secondPartVocalRig "way-8-voice" Way8 And9 (\t -> genericFB "way-8-outter" 0.4 0.6 <<< waveShaper_ "wave-shaper-way" "wicked" (if t % 0.36 < 0.18 then TwoX else FourX))
+  , secondPartVocalRig "and-9-voice" And9 While9 (const $ genericFB "and-9-outter" 0.26 0.7)
+  , secondPartVocalRig "while-9-voice" While9 We9 (const $ genericFB "while-9-outter" 0.21 0.6)
+  , secondPartVocalRig "we-9-voice" We9 Spoke9 (const $ genericFB "we-9-outter" 0.15 0.5)
+  , secondPartVocalRig "spoke-9-voice" Spoke9 Of9 (const $ genericFB "spoke-9-outter" 0.1 0.4)
+  , secondPartVocalRig "of-9-voice" Of9 Ma9 (const $ genericFB "of-9-outter" 0.06 0.3)
   ] ::
     Array SigAU
+
+maVoice :: SigAU
+maVoice =
+  boundByCueWithOnset Ma9 Ny9 \_ onset _ t' ->
+    let
+      t = t' - onset
+    in
+      pure
+        $ ( dup2_ "pmicdupMaVoice" (pmic "maVoiceBase") \m ->
+              gain_ "maHarmDelAdder" 1.0
+                ( harmDel "ma-0" (conv1 3.0 - 1.0) 0.5 t m
+                    :| harmDel "ma-1" (conv1 5.0 - 1.0) 0.4 t m
+                    : harmDel "ma-2" (conv1 8.0 - 1.0) 0.45 t m
+                    : m
+                    : Nil
+                )
+          )
+
+nyOrAndVoice :: String -> Marker -> Marker -> SigAU
+nyOrAndVoice tag st ed =
+  boundByCue st ed
+    ( \m t ->
+        pure
+          $ graph_ (tag <> "NyOrAndGraph")
+              { aggregators:
+                  { out: Tuple (g'add_ (tag <> "NyOrAndOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ (tag <> "NyOrAndCombine")) (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ (tag <> "NyOrAndGain") 0.7) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ (tag <> "NyOrAndDelay") 0.29) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' st st (pmic (tag <> "NyOrAndMic")) m
+                  }
+              }
+    )
+
+ny9Voice = nyOrAndVoice "ny9" Ny9 Things9 :: SigAU
+
+and10Voice = nyOrAndVoice "and10" And10 Kings10 :: SigAU
+
+thingsPwfVoice =
+  [ Tuple 0.0 1.0
+  , Tuple 1.0 1.0
+  , Tuple 1.06 0.0
+  , Tuple 1.20 0.0
+  , Tuple 1.25 1.0
+  , Tuple 2.1 1.0
+  , Tuple 2.16 0.0
+  , Tuple 2.35 0.0
+  , Tuple 2.41 1.0
+  , Tuple 3.05 1.0
+  , Tuple 3.12 0.0
+  , Tuple 3.2 0.0
+  , Tuple 3.24 1.0
+  ] ::
+    Array (Tuple Number Number)
+
+thingsPwfOsc = over (traversed <<< _2) (\n -> 0.3 * (1.0 - n)) thingsPwfVoice :: Array (Tuple Number Number)
+
+thingsVoice :: SigAU
+thingsVoice =
+  boundByCueWithOnset Things9 Fools10
+    ( \_ onset m t ->
+        let
+          time = t - onset
+        in
+          pure
+            $ ( gain_ "ThingsGlobalFader" 1.0
+                  ( graph_ "Things9Graph"
+                      { aggregators:
+                          { out: Tuple (g'add_ "Things9Out") (SLProxy :: SLProxy ("combine" :/ SNil))
+                          , combine: Tuple (g'add_ "Things9Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                          , gain: Tuple (g'gain_ "Things9Gain" 0.7) (SLProxy :: SLProxy ("del" :/ SNil))
+                          }
+                      , processors:
+                          { del: Tuple (g'delay_ "Things9Delay" 0.45) (SProxy :: SProxy "combine")
+                          }
+                      , generators:
+                          { mic:
+                              boundByCueNac''' Things9 Things9
+                                ( gainT_' ("Things9Voilent")
+                                    (epwf thingsPwfVoice time)
+                                    (pmic "Things9Mic")
+                                )
+                                m
+                          }
+                      }
+                      :| ( pannerMono_ "poscThingsPan" 0.0
+                            $ gainT_' ("poscThingsGain")
+                                (epwf thingsPwfOsc time)
+                                (periodicOsc_ "thingsPosc" "rich" (conv440 60.0))
+                        )
+                      : Nil
+                  )
+              )
+    )
+
+peakingKings :: String -> Number -> Number -> Number -> AudioUnit D2 -> AudioUnit D2
+peakingKings tag freq rate t = peaking_ (tag <> "peakingKings") freq (5.2 + (-5.0) * cos (rate * pi * t)) 0.0
+
+peakingKingsList :: List (Tuple Number Number)
+peakingKingsList =
+  Tuple (conv440 (-2.0)) 1.0
+    : Tuple (conv440 10.0) 1.1
+    : Tuple (conv440 17.0) 1.2
+    : Tuple (conv440 22.0) 1.3
+    : Tuple (conv440 36.0) 1.4
+    : Nil
+
+kingsVoice :: SigAU
+kingsVoice =
+  secondPartVocalRig "kings-10-voice" Kings10 This11
+    ( \t u ->
+        dup2_ "kings-dup" u
+          ( \m ->
+              gain_ "kings-dup-gain" 0.2
+                $ toNel
+                    ( map (\(Tuple f r) -> peakingKings (show f) f r t m)
+                        peakingKingsList
+                    )
+          )
+    )
+
+thisHeSaidTo :: SigAU
+thisHeSaidTo =
+  boundByCueWithOnset This11 To11
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure $ dup2 (pmic "thisHeSaidToPmic") \d -> (gainT_' "thisHeSaidToDry" (epwf [ Tuple 0.0 0.0, Tuple 4.0 1.0 ] time) d + (gainT_' "thisHeSaidToWeT" (epwf [ Tuple 0.0 1.0, Tuple 4.0 0.0 ] time) $ convolver_ "veryWiseWasHeVoiceConvolver" "matrix-verb-5" d))
+    )
 
 natureBoy =
   [ there0
@@ -2447,7 +2776,6 @@ natureBoy =
   , boy1
   , they2
   , sayHeWandered
-  , theySayHeWanderedCymbal
   , theyGong
   , sayGong
   , heGong
@@ -2501,9 +2829,21 @@ natureBoy =
   , improGlitch
   , improWobble
   , improFiligree
+  , maVoice
+  , ny9Voice
+  , thingsVoice
+  , foolsVoice
+  , and10Voice
+  , kingsVoice
+  , thisHeSaidTo
+  , meBeforeGreatest
+  , theGreatestThingYoullEverLearnIsJustToLove
+  , and13Voice
+  , beLovedInReturn
   ]
+    <> theySayHeWanderedBuildup
     <> secondPartBP
-    <> secondPartVocals ::
+    <> secondPartVocalsUsingRig ::
     Array SigAU
 
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
@@ -2545,6 +2885,21 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
         )
         acc.currentMarker
 
+makeDistortionCurve :: Number -> Array Number
+makeDistortionCurve k =
+  map
+    ( \i ->
+        let
+          x = (toNumber i * 2.0 / toNumber n_samples) - 1.0
+        in
+          (3.0 + k) * x * 20.0 * deg / (pi + (k * abs x))
+    )
+    (range 0 $ n_samples - 1)
+  where
+  n_samples = 44100
+
+  deg = pi / 180.0
+
 main :: Klank' NatureBoyAccumulator
 main =
   klank
@@ -2569,6 +2924,13 @@ main =
         res
           [ "https://klank-share.s3.eu-west-1.amazonaws.com/K16050057737584320.js" -- smoothing amplitude tracker
           ]
+    , floatArrays =
+      const
+        $ affable
+            ( do
+                wicked <- liftEffect $ makeFloatArray (makeDistortionCurve 400.0)
+                pure $ O.singleton "wicked" wicked
+            )
     -- All sounds from freesound.org are used with the CC attribution license.
     -- For attribution information, see the links of the files themselves, all of which link to information about the file and author.
     , buffers =
@@ -2589,6 +2951,8 @@ main =
         , Tuple "kettle-f-sharp-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleFSharp4.ogg"
         -- impulses
         , Tuple "matrix-verb-3" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb3.wav"
+        , Tuple "matrix-verb-3" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb3.wav"
+        , Tuple "matrix-verb-5" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb5.wav"
         -- harmonic stuff
         ------- interj
         , Tuple "g-sharp-a-sharp-high" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/gSharpASharpInterjection.ogg"

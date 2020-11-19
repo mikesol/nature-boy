@@ -18,7 +18,7 @@ epwf :: Array (Tuple Number Number) -> Number -> AudioParameter
 epwf = evalPiecewise kr
 
 conv1 :: Number -> Number
-conv1 i = 1.0 * (2.0 `pow` ((i - 0.0) / 12.0))
+conv1 i = 1.0 * (2.0 `pow` ((i - 1.0) / 12.0))
 
 scene :: Number -> Behavior (AudioUnit D1)
 scene time =
