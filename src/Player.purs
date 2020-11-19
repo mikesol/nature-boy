@@ -10,7 +10,7 @@ import Foreign.Object as O
 import Type.Klank.Dev (Klank, Buffers, affable, klank)
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene time = pure $ speaker' (gain' 1.0 (loopBuf "scratch" 0.7 0.0 0.0))
+scene time = pure $ speaker' (gain' 1.0 (loopBuf "scratch" 0.7 0.1 0.3))
 
 buffers :: Buffers
 buffers ctx _ =

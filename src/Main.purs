@@ -4,15 +4,15 @@ import Prelude
 import Color (Color, rgb)
 import Control.Parallel (parallel, sequential)
 import Control.Promise (toAffE)
-import Data.Array (catMaybes, filter, head, length, mapWithIndex, range)
+import Data.Array (catMaybes, filter, head, index, length, mapWithIndex, range)
 import Data.Either (either)
 import Data.Foldable (fold, foldl, traverse_)
-import Data.Int (toNumber)
+import Data.Int (floor, toNumber)
 import Data.Lens (_2, over)
 import Data.List (List(..), (:))
 import Data.List as L
 import Data.Map as M
-import Data.Maybe (Maybe(..), isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Newtype (wrap)
 import Data.NonEmpty (NonEmpty, (:|))
 import Data.Profunctor (lcmap)
@@ -27,7 +27,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, makePeriodicWave, microphone_, mul_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, dup2, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -213,10 +213,37 @@ there0 =
   boundByCue There0 There0
     (\m t -> pure (pmic "There0Mic"))
 
+andPt2filt :: Number -> AudioUnit D2 -> AudioUnit D2
+andPt2filt t = go (t % (ival * 4.0))
+  where
+  ival = 0.32
+
+  go x
+    | x < ival = (lowpass_ "andP2filtLP" 200.0 4.0)
+    | x < 2.0 * ival = identity
+    | x < 3.0 * ival = (highpass_ "andP2filtLP" 1500.0 4.0)
+    | otherwise = identity
+
 andPt2Voice :: SigAU
 andPt2Voice =
-  boundByCue And7 And7
-    (\m t -> pure (pmic "And7Mic"))
+  boundByCueWithOnset And7 And7
+    (\ac onset m t -> pure ((andPt2filt $ (t - onset)) (pmic "And7Mic")))
+
+genericFB :: String -> Number -> Number -> AudioUnit D2 -> AudioUnit D2
+genericFB tag del gn u =
+  graph_ (tag <> "GenericFBGraph")
+    { aggregators:
+        { out: Tuple (g'add_ (tag <> "GenericFBOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+        , combine: Tuple (g'add_ (tag <> "GenericFBCombine")) (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+        , gain: Tuple (g'gain_ (tag <> "GenericFBGain") gn) (SLProxy :: SLProxy ("del" :/ SNil))
+        }
+    , processors:
+        { del: Tuple (g'delay_ (tag <> "GenericFBDelay") del) (SProxy :: SProxy "combine")
+        }
+    , generators:
+        { mic: u
+        }
+    }
 
 was0 :: SigAU
 was0 =
@@ -2363,6 +2390,50 @@ veryStrangeEnchantedBoyComp ac cm _ =
           )
     )
 
+type Filt
+  = Number -> AudioUnit D2 -> AudioUnit D2
+
+secondPartVocalRig :: String -> Marker -> Marker -> Filt -> SigAU
+secondPartVocalRig tag st ed filt =
+  boundByCueWithOnset st ed
+    ( \ac onset m t ->
+        pure
+          $ graph_ (tag <> "SecondPartVocalsGraph")
+              { aggregators:
+                  { out: Tuple (g'add_ (tag <> "SecondPartVocalsOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ (tag <> "SecondPartVocalsCombine")) (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
+                  , gain: Tuple (g'gain_ (tag <> "SecondPartVocalsGain") 0.2) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ (tag <> "SecondPartVocalsDelay") 0.4) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { mic: boundByCueNac''' st st ((filt $ t - onset) (pmic (tag <> "SecondPartVocalsMic"))) m
+                  }
+              }
+    )
+
+filtLtoFiltF :: Number -> Array (AudioUnit D2 -> AudioUnit D2) -> Filt
+filtLtoFiltF len arr t = fromMaybe identity (arr `index` floor ((t % (len * ((toNumber <<< length) arr))) / len))
+
+then7Filt :: Filt
+then7Filt t =
+  filtLtoFiltF 0.27
+    [ lowshelf_ "lowshelfThen7" 818.0 7.0
+    , bandpass_ "bandpassThen7" 320.0 0.0
+    , notch_ "notchThen7" 320.0 0.0
+    , highpass_ "highpassThen7" 2000.0 7.0
+    , lowpass_ "lowpassThen7" 100.0 7.0
+    , allpass_ "allpassThen7" (200.0 + ((t % 0.27) * 3000.0 / 0.27)) 6.0
+    ]
+    t
+
+secondPartVocals =
+  [ secondPartVocalRig "then-7-voice" Then7 One7 then7Filt
+  , secondPartVocalRig "one-7-voice" One7 Day7 (const (genericFB "one-7-outter" 0.07 0.3 <<< genericFB "one-7-middle" 0.1 0.3 <<< genericFB "one-7-inner" 0.05 0.13))
+  ] ::
+    Array SigAU
+
 natureBoy =
   [ there0
   , was0
@@ -2431,7 +2502,8 @@ natureBoy =
   , improWobble
   , improFiligree
   ]
-    <> secondPartBP ::
+    <> secondPartBP
+    <> secondPartVocals ::
     Array SigAU
 
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
