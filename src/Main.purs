@@ -2815,6 +2815,16 @@ thenOneDayOneMagicDayHePassedMyWayDrums =
           pure (gain_' "glitchDrumGain" (min 1.0 (time * 0.15)) (loopBuf_ "glitchDrumBuf" "drumz-cat-55" 1.0 left right))
     )
 
+theGreatestThingDrumOutro :: SigAU
+theGreatestThingDrumOutro =
+  boundByCueWithOnset The12 Re13
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "glitchDrumGain" (max 0.0 (1.0 - time * 0.1)) (lowpass_ "lpglitchdrum" 70.0 5.0 (waveShaper_ "ws-drum" "wicked" FourX (loopBuf_ "glitchDrumBuf" "drumz-cat-55" 1.0 0.0 0.0))))
+    )
+
 data ManyThingsDrumMachine
   = Cat55
   | Cat80
@@ -3028,6 +3038,7 @@ natureBoy =
   , kingsVoice
   , thisHeSaidTo
   , meBeforeGreatest
+  , theGreatestThingDrumOutro
   , theGreatestThingYoullEverLearnIsJustToLove
   , and13Voice
   , beLovedInReturn
