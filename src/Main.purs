@@ -607,7 +607,8 @@ veryWiseWahs =
   , bpWah 5.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
   , bpWah 5.5 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
   , bpWah 5.9 "a#" "rich" 0.2 3 (82.0 : Nil) (Just 4500.0) 0.2 0.2 (0.3) (-0.4)
-  ]
+  ] ::
+    Array (Number -> List (AudioUnit D2))
 
 veryWiseWasHeWahs :: SigAU
 veryWiseWasHeWahs =
@@ -652,6 +653,8 @@ wiseWasHeAndClock =
           pure (gain_' "wiseWasHeAndClockGain" (min 1.0 (0.1 * time)) (loopBuf_ "wiseWasHeAndClockBuf" "wall-clock" 1.0 0.0 0.0))
     )
 
+planeLandingEnv = [ Tuple 0.0 0.0, Tuple 1.0 1.0, Tuple 1.64 1.0, Tuple 1.7 0.0, Tuple 1.8 1.0, Tuple 2.24 1.0, Tuple 2.3 0.0, Tuple 2.4 1.0, Tuple 2.6 1.0, Tuple 2.65 0.0, Tuple 2.72 1.0, Tuple 2.9 1.0, Tuple 2.94 0.0, Tuple 3.0 1.0, Tuple 3.4 1.0, Tuple 3.42 0.0, Tuple 3.5 1.0, Tuple 3.6 1.0, Tuple 3.62 0.0, Tuple 3.7 1.0 ] :: Array (Tuple Number Number)
+
 planeLanding :: SigAU
 planeLanding =
   boundByCueWithOnset He6 He6
@@ -659,7 +662,7 @@ planeLanding =
         let
           time = t - onset
         in
-          pure (gainT_' "planeLandingGain" (epwf [ Tuple 0.0 0.0, Tuple 1.0 1.0, Tuple 1.64 1.0, Tuple 1.7 0.0, Tuple 1.8 1.0, Tuple 2.24 1.0, Tuple 2.3 0.0, Tuple 2.4 1.0, Tuple 2.6 1.0, Tuple 2.65 0.0, Tuple 2.72 1.0, Tuple 2.9 1.0, Tuple 2.94 0.0, Tuple 3.0 1.0, Tuple 3.4 1.0, Tuple 3.42 0.0, Tuple 3.5 1.0, Tuple 3.6 1.0, Tuple 3.62 0.0, Tuple 3.7 1.0 ] time) (playBuf_ "planeLandingBuf" "plane-landing" 1.0))
+          pure (gainT_' "planeLandingGain" (epwf planeLandingEnv time) (playBuf_ "planeLandingBuf" "plane-landing" 1.0))
     )
 
 scratchySwellHe :: SigAU
@@ -1441,6 +1444,34 @@ ryGongBackwards =
                 )
     )
 
+airRaidPWF =
+  [ Tuple 0.0 1.0
+  , Tuple 0.2 1.0
+  , Tuple 0.3 0.2
+  , Tuple 0.5 0.7
+  , Tuple 1.4 0.7
+  , Tuple 1.5 0.1
+  , Tuple 1.6 0.7
+  , Tuple 1.7 0.1
+  , Tuple 1.8 0.7
+  , Tuple 1.9 0.1
+  , Tuple 2.0 0.7
+  , Tuple 2.1 0.1
+  , Tuple 2.2 0.7
+  , Tuple 2.3 0.1
+  , Tuple 2.4 0.6
+  , Tuple 2.5 0.1
+  , Tuple 2.6 0.5
+  , Tuple 2.7 0.1
+  , Tuple 2.8 0.4
+  , Tuple 2.9 0.1
+  , Tuple 3.0 0.3
+  , Tuple 3.1 0.1
+  , Tuple 3.2 0.2
+  , Tuple 3.3 0.1
+  ] ::
+    Array (Tuple Number Number)
+
 farShriek :: SigAU
 farShriek =
   boundByCueWithOnset Far2 And4
@@ -1465,34 +1496,7 @@ farShriek =
                           { chimez:
                               ( if t < 4.0 then
                                   ( gainT_' "AirRaidSirenCarveGian"
-                                      ( epwf
-                                          [ Tuple 0.0 1.0
-                                          , Tuple 0.2 1.0
-                                          , Tuple 0.3 0.2
-                                          , Tuple 0.5 0.7
-                                          , Tuple 1.4 0.7
-                                          , Tuple 1.5 0.1
-                                          , Tuple 1.6 0.7
-                                          , Tuple 1.7 0.1
-                                          , Tuple 1.8 0.7
-                                          , Tuple 1.9 0.1
-                                          , Tuple 2.0 0.7
-                                          , Tuple 2.1 0.1
-                                          , Tuple 2.2 0.7
-                                          , Tuple 2.3 0.1
-                                          , Tuple 2.4 0.6
-                                          , Tuple 2.5 0.1
-                                          , Tuple 2.6 0.5
-                                          , Tuple 2.7 0.1
-                                          , Tuple 2.8 0.4
-                                          , Tuple 2.9 0.1
-                                          , Tuple 3.0 0.3
-                                          , Tuple 3.1 0.1
-                                          , Tuple 3.2 0.2
-                                          , Tuple 3.3 0.1
-                                          ]
-                                          t
-                                      )
+                                      (epwf airRaidPWF t)
                                       $ playBuf_
                                           ("AirRaidSirenAboveC#Buf")
                                           "terrifying-air-raid-siren"
