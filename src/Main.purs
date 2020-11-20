@@ -593,6 +593,22 @@ heRichSwell =
 bpWah :: Number -> String -> String -> Number -> Int -> List Number -> Maybe Number -> Number -> Number -> Number -> Number -> Number -> List (AudioUnit D2)
 bpWah t tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd = atT t (boundPlayer (len + 0.3) (wah tag pwave len nwahs pitches filt gnStart gnEnd panStart panEnd))
 
+veryWiseWahs =
+  [ bpWah 1.0 "f#" "smooth" 0.3 1 (56.0 : Nil) Nothing 0.3 0.3 0.5 0.5
+  , bpWah 1.4 "e" "rich" 0.3 1 (64.0 : Nil) (Just 3500.0) 0.3 0.3 (-0.5) (-0.5)
+  , bpWah 1.8 "b" "smooth" 0.3 1 (71.0 : Nil) Nothing 0.4 0.4 (0.0) (0.0)
+  , bpWah 2.2 "d#" "rich" 0.2 1 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
+  , bpWah 2.6 "f#" "smooth" 0.5 3 (32.0 : Nil) Nothing 0.3 0.3 0.0 0.0
+  , bpWah 3.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
+  , bpWah 3.5 "e" "rich" 0.3 1 (61.0 : 64.0 : Nil) (Just 3500.0) 0.3 0.3 (-0.5) (-0.5)
+  , bpWah 3.9 "b" "smooth" 0.3 2 (68.0 : 71.0 : Nil) Nothing 0.4 0.4 (0.0) (0.0)
+  , bpWah 4.3 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
+  , bpWah 4.7 "f#" "smooth" 0.5 3 (32.0 : Nil) Nothing 0.3 0.3 0.0 0.0
+  , bpWah 5.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
+  , bpWah 5.5 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
+  , bpWah 5.9 "a#" "rich" 0.2 3 (82.0 : Nil) (Just 4500.0) 0.2 0.2 (0.3) (-0.4)
+  ]
+
 veryWiseWasHeWahs :: SigAU
 veryWiseWasHeWahs =
   boundByCueWithOnset Ve6 Was6
@@ -602,20 +618,7 @@ veryWiseWasHeWahs =
         in
           fold
             ( map (\f -> f time)
-                [ bpWah 1.0 "f#" "smooth" 0.3 1 (56.0 : Nil) Nothing 0.3 0.3 0.5 0.5
-                , bpWah 1.4 "e" "rich" 0.3 1 (64.0 : Nil) (Just 3500.0) 0.3 0.3 (-0.5) (-0.5)
-                , bpWah 1.8 "b" "smooth" 0.3 1 (71.0 : Nil) Nothing 0.4 0.4 (0.0) (0.0)
-                , bpWah 2.2 "d#" "rich" 0.2 1 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
-                , bpWah 2.6 "f#" "smooth" 0.5 3 (32.0 : Nil) Nothing 0.3 0.3 0.0 0.0
-                , bpWah 3.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
-                , bpWah 3.5 "e" "rich" 0.3 1 (61.0 : 64.0 : Nil) (Just 3500.0) 0.3 0.3 (-0.5) (-0.5)
-                , bpWah 3.9 "b" "smooth" 0.3 2 (68.0 : 71.0 : Nil) Nothing 0.4 0.4 (0.0) (0.0)
-                , bpWah 4.3 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
-                , bpWah 4.7 "f#" "smooth" 0.5 3 (32.0 : Nil) Nothing 0.3 0.3 0.0 0.0
-                , bpWah 5.1 "f#-2" "smooth" 0.3 1 (44.0 : Nil) Nothing 0.2 0.6 0.0 0.0
-                , bpWah 5.5 "d#" "rich" 0.2 3 (75.0 : Nil) (Just 3500.0) 0.25 0.6 (-0.3) (0.4)
-                , bpWah 5.9 "a#" "rich" 0.2 3 (82.0 : Nil) (Just 4500.0) 0.2 0.2 (0.3) (-0.4)
-                ]
+                veryWiseWahs
             )
     )
 
@@ -903,20 +906,32 @@ singleLowGSharpCello s time =
       )
   )
 
-theyGong :: SigAU
-theyGong = boundByCueWithOnset They2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.5 $ overZeroPlayer (const $ pure (playBuf_ ("They2GongPlayer") "kettle-g-sharp-3" 1.0))) time
+tshwvfGong :: String -> Marker -> Marker -> Number -> SigAU
+tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (playBuf_ (buf <> "GongPlayer") buf 1.0))) time
 
-sayGong :: SigAU
-sayGong = boundByCueWithOnset Say2 Wan2 \ac onset m t -> let time = t - onset in (atT 0.4 $ overZeroPlayer (const $ pure (playBuf_ ("Say2GongPlayer") "kettle-a-3" 1.0))) time
+theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.5 :: SigAU
 
-heGong :: SigAU
-heGong = boundByCueWithOnset He2 Dered2 \ac onset m t -> let time = t - onset in (atT 0.4 $ overZeroPlayer (const $ pure (playBuf_ ("He2GongPlayer") "kettle-c-4" 1.0))) time
+sayGong = tshwvfGong "kettle-a-3" Say2 Wan2 0.4 :: SigAU
 
-wanGong :: SigAU
-wanGong = boundByCueWithOnset Wan2 Ve3 \ac onset m t -> let time = t - onset in (atT 0.3 $ overZeroPlayer (const $ pure (playBuf_ ("Wan2GongPlayer") "kettle-e-flat-4" 1.0))) time
+heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.4 :: SigAU
 
-deredGong :: SigAU
-deredGong = boundByCueWithOnset Dered2 Ry3 \ac onset m t -> let time = t - onset in (atT 0.2 $ overZeroPlayer (const $ pure (playBuf_ ("Dered2GongPlayer") "kettle-f-sharp-4" 1.0))) time
+wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.3 :: SigAU
+
+deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.2 :: SigAU
+
+--
+tshwvfPad :: String -> Marker -> Marker -> SigAU
+tshwvfPad buf st ed = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in pure (gainT_' (buf <> "PadGain") (epwf [ Tuple 0.0 0.0, Tuple 0.25 1.0, Tuple 1.2 0.0 ] time) (playBuf_ (buf <> "PadPlayer") buf 1.0))
+
+sayPad = tshwvfPad "say-pad" Say2 Ve3 :: SigAU
+
+hePad = tshwvfPad "he-pad" He2 Ve3 :: SigAU
+
+wanPad = tshwvfPad "wan-pad" Wan2 Ve3 :: SigAU
+
+deredPad = tshwvfPad "dered-pad" Dered2 Ry3 :: SigAU
+
+veRyPad = tshwvfPad "very-pad" Ve3 Far3 :: SigAU
 
 -- at offset length freq q
 data AOLFQ
@@ -2774,13 +2789,159 @@ thisHeSaidTo =
 
 slowDrumSecondPart :: SigAU
 slowDrumSecondPart =
-  boundByCueWithOnset Then7 Ma9
+  boundByCueWithOnset Then7 Passed8
     ( \ac onset m t ->
         let
           time = t - onset
         in
-          pure (gain_' "skiddawVeryWiseGain" (max 0.0 (0.8 - (time * 0.1))) (lowpass_ "then-one-day-lp" 170.0 5.0 (playBuf_ "skiddawVeryWiseBuf" "slow-drum-pattern" (0.8 - ((time * 0.2) % 0.1)))))
+          pure (gain_' "slowDrumGain" (max 0.0 (0.8 - (time * 0.1))) (lowpass_ "then-one-day-lp" 170.0 5.0 (playBuf_ "slowDrumBuff" "slow-drum-pattern" (0.8 - ((time * 0.2) % 0.1)))))
     )
+
+thenOneDayOneMagicDayHePassedMyWayDrums :: SigAU
+thenOneDayOneMagicDayHePassedMyWayDrums =
+  boundByCueWithOnset Then7 Of9
+    ( \ac onset m t ->
+        let
+          time = t - onset
+
+          left = 30.0 + 30.0 * sin ((if m >= While9 then 10.0 else 0.2) * time * pi)
+
+          right = min 78.0 ((if m >= While9 then 0.5 else 4.4) + (if m >= While9 then 0.3 else 4.0) * sin (if m >= While9 then 12.0 else 0.35 * time * pi) + left)
+        in
+          pure (gain_' "glitchDrumGain" (min 1.0 (time * 0.15)) (loopBuf_ "glitchDrumBuf" "drumz-cat-55" 1.0 left right))
+    )
+
+data ManyThingsDrumMachine
+  = Cat55
+  | Cat80
+  | Cat100
+  | Cat110
+  | Cat160
+
+-- offset l dm
+data TOD
+  = TOD Number Number (Maybe (Tuple ManyThingsDrumMachine (AudioUnit D2 -> AudioUnit D2)))
+
+makeDrumMachine :: Marker -> Array TOD -> SigAU
+makeDrumMachine mk atod' =
+  boundByCueWithOnset mk mk
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          fold (map (\f -> f time) bps)
+    )
+  where
+  atod = (foldl (\{ acc, clen } (TOD offset len dm) -> { acc: acc <> [ Tuple (len + clen) (TOD offset len dm) ], clen: len + clen }) { acc: [], clen: 0.0 } atod').acc
+
+  bps = mapWithIndex (\i (Tuple loc (TOD offset len dm')) -> (maybe (const Nil) \(Tuple dm hpf) -> let preface = m2s mk <> mt2s dm <> show i in atT loc $ boundPlayer (len + 0.06) (\tnow -> pure $ gainT_' (preface <> "mdm-gain") (epwf [ Tuple 0.0 1.0, Tuple len 1.0, Tuple (len + 0.03) 0.0 ] tnow) (hpf $ playBufWithOffset_ (preface <> "mdm-buf") (mt2s dm) 1.0 offset))) dm') atod
+
+mt2s :: ManyThingsDrumMachine -> String
+mt2s Cat55 = "drumz-cat-55"
+
+mt2s Cat80 = "drumz-cat-80"
+
+mt2s Cat100 = "drumz-cat-100"
+
+mt2s Cat110 = "drumz-cat-110"
+
+mt2s Cat160 = "drumz-cat-160"
+
+maDrumz =
+  makeDrumMachine Ma9
+    [ TOD 20.0 0.41 (Just $ Tuple Cat55 identity)
+    , TOD 0.0 3.0 (Just $ Tuple Cat160 identity) -- will spill over
+    ] ::
+    SigAU
+
+nyDrumz =
+  makeDrumMachine Ny9
+    [ TOD 10.0 0.35 (Just $ Tuple Cat80 identity)
+    , TOD 8.0 3.0 (Just $ Tuple Cat100 identity) -- will spill over
+    ] ::
+    SigAU
+
+thingsDrumz =
+  makeDrumMachine Things9
+    [ TOD 20.0 0.41 (Just $ Tuple Cat55 identity)
+    , TOD 0.0 0.2 (Just $ Tuple Cat160 identity)
+    , TOD 1.0 0.4 (Just $ Tuple Cat160 identity)
+    , TOD 3.0 0.15 (Just $ Tuple Cat160 identity)
+    , TOD 3.0 0.35 (Just $ Tuple Cat55 identity)
+    , TOD 3.0 0.3 (Just $ Tuple Cat100 identity)
+    , TOD 3.0 0.26 (Just $ Tuple Cat110 identity)
+    , TOD 6.0 0.55 (Just $ Tuple Cat100 identity)
+    , TOD 0.0 0.2 (Just $ Tuple Cat160 identity)
+    , TOD 10.0 0.9 (Nothing)
+    , TOD 5.0 0.35 (Just $ Tuple Cat110 identity)
+    , TOD 7.0 1.5 (Just $ Tuple Cat80 identity)
+    , TOD 3.0 0.4 (Just $ Tuple Cat110 identity)
+    , TOD 7.0 0.3 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.3 (Just $ Tuple Cat160 identity)
+    , TOD 20.0 0.56 (Just $ Tuple Cat55 identity)
+    , TOD 0.0 0.2 (Nothing)
+    , TOD 20.0 0.42 (Just $ Tuple Cat55 identity)
+    , TOD 0.0 0.1 (Just $ Tuple Cat110 identity)
+    , TOD 20.0 0.42 (Nothing)
+    , TOD 7.0 4.0 (Just $ Tuple Cat80 identity)
+    ] ::
+    SigAU
+
+foolsDrumz =
+  makeDrumMachine Fools10
+    [ TOD 20.0 0.9 (Nothing)
+    , TOD 0.0 0.15 (Just $ Tuple Cat160 identity)
+    , TOD 1.0 4.0 (Nothing)
+    ] ::
+    SigAU
+
+andDrumz =
+  makeDrumMachine And10
+    [ TOD 0.0 0.2 (Just $ Tuple Cat55 identity)
+    , TOD 0.0 0.2 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.2 (Just $ Tuple Cat100 identity)
+    , TOD 0.0 0.2 (Just $ Tuple Cat110 identity)
+    , TOD 0.0 3.0 (Just $ Tuple Cat160 identity)
+    ] ::
+    SigAU
+
+kingsDrumz =
+  makeDrumMachine Kings10
+    [ TOD 0.0 1.2 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.4 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.6 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 2.3 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.4 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 10.0 (Just $ Tuple Cat55 identity)
+    ] ::
+    SigAU
+
+thisDrumz =
+  makeDrumMachine This11
+    [ TOD 0.0 10.0 (Just $ Tuple Cat55 (highpass_ "thisDrumzHpf" 700.0 8.0))
+    ] ::
+    SigAU
+
+heDrumz =
+  makeDrumMachine He11
+    [ TOD 20.0 10.0 (Just $ Tuple Cat55 (highpass_ "heDrumzHpf" 1400.0 8.0))
+    ] ::
+    SigAU
+
+saidDrumz =
+  makeDrumMachine Said11
+    [ TOD 15.0 10.0 (Just $ Tuple Cat55 (highpass_ "saidDrumzHpf" 2100.0 8.0))
+    ] ::
+    SigAU
+
+toDrumz =
+  makeDrumMachine To11
+    [ TOD 12.0 10.0 (Just $ Tuple Cat110 (highpass_ "toDrumzHpf" 3000.0 8.0))
+    ] ::
+    SigAU
+
+manyThingsFoolsAndKingsThisHeSaidToMeDrumz :: Array SigAU
+manyThingsFoolsAndKingsThisHeSaidToMeDrumz = [ maDrumz, nyDrumz, thingsDrumz, foolsDrumz, andDrumz, kingsDrumz, thisDrumz, heDrumz, saidDrumz, toDrumz ]
 
 natureBoy =
   [ there0
@@ -2797,9 +2958,14 @@ natureBoy =
   , sayHeWandered
   , theyGong
   , sayGong
+  , sayPad
   , heGong
+  , hePad
   , wanGong
+  , wanPad
   , deredGong
+  , deredPad
+  , veRyPad
   , veRy2
   , far2
   , veryFarDrones
@@ -2843,6 +3009,7 @@ natureBoy =
   ----------- pt 2
   , andPt2Voice
   , slowDrumSecondPart
+  , thenOneDayOneMagicDayHePassedMyWayDrums
   , bassGlitch1
   , bassGlitch2
   , bassManyThings
@@ -2863,7 +3030,8 @@ natureBoy =
   ]
     <> theySayHeWanderedBuildup
     <> secondPartBP
-    <> secondPartVocalsUsingRig ::
+    <> secondPartVocalsUsingRig
+    <> manyThingsFoolsAndKingsThisHeSaidToMeDrumz ::
     Array SigAU
 
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
@@ -2965,6 +3133,11 @@ main =
         , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
         -- drumz
         , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.ogg"
+        , Tuple "drumz-cat-55" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs55.ogg"
+        , Tuple "drumz-cat-80" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs80.ogg"
+        , Tuple "drumz-cat-100" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs100.ogg"
+        , Tuple "drumz-cat-110" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs110.ogg"
+        , Tuple "drumz-cat-160" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs160.ogg"
         -- gamelan
         , Tuple "kettle-g-sharp-3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleGSharp3.ogg"
         , Tuple "kettle-a-3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleA3.ogg"
