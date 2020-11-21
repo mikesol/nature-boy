@@ -5,8 +5,9 @@ import Color (Color, rgb)
 import Control.Parallel (parallel, sequential)
 import Control.Promise (toAffE)
 import Data.Array (catMaybes, filter, head, index, length, mapWithIndex, range)
+import Data.Array as A
 import Data.Either (either)
-import Data.Foldable (fold, foldl, traverse_)
+import Data.Foldable (class Foldable, fold, foldl, traverse_)
 import Data.Int (floor, toNumber)
 import Data.Lens (_2, over, traversed)
 import Data.List (List(..), (:))
@@ -107,6 +108,9 @@ atT t = lcmap (_ - t)
 
 loopT :: forall a. Number -> (Number -> a) -> (Number -> a)
 loopT t = lcmap (_ % t)
+
+foldOverTime :: forall a b f. Foldable f => Applicative f => Monoid (f b) => (Number -> a -> b) -> (a -> Number) -> f a -> f b
+foldOverTime trans getn = _.acc <<< foldl (\{ acc, clen } a -> { acc: acc <> (pure $ trans clen a), clen: clen + getn a }) { acc: mempty, clen: 0.0 }
 
 boundPlayer :: forall a. Number -> (Number -> List a) -> Number -> List a
 boundPlayer len a time = if (time) + kr >= 0.0 && time < (len) then a time else Nil
@@ -1427,7 +1431,7 @@ gongBackwards2Atomic tag len =
     )
 
 gongBackwards2 :: Array (Number -> List (AudioUnit D1))
-gongBackwards2 = (foldl (\{ acc, t } a -> { acc: [ atT t $ gongBackwards2Atomic (show t) a ] <> acc, t: t + a }) { acc: [], t: 0.0 } [ 0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 1.0, 1.0, 0.7, 0.4, 0.4, 0.4, 1.4, 0.5, 0.5, 0.7, 0.7, 1.0, 1.0 ]).acc
+gongBackwards2 = foldOverTime (\t a -> atT t $ gongBackwards2Atomic (show t) a) identity [ 0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 1.0, 1.0, 0.7, 0.4, 0.4, 0.4, 1.4, 0.5, 0.5, 0.7, 0.7, 1.0, 1.0 ]
 
 ryGongBackwards :: SigAU
 ryGongBackwards =
@@ -2846,7 +2850,7 @@ makeDrumMachine mk atod' =
           fold (map (\f -> f time) bps)
     )
   where
-  atod = (foldl (\{ acc, clen } (TOD offset len dm) -> { acc: acc <> [ Tuple (len + clen) (TOD offset len dm) ], clen: len + clen }) { acc: [], clen: 0.0 } atod').acc
+  atod = foldOverTime (\clen (TOD offset len dm) -> Tuple (len + clen) (TOD offset len dm)) (\(TOD _ len _) -> len) atod'
 
   bps = mapWithIndex (\i (Tuple loc (TOD offset len dm')) -> (maybe (const Nil) \(Tuple dm hpf) -> let preface = m2s mk <> mt2s dm <> show i in atT loc $ boundPlayer (len + 0.06) (\tnow -> pure $ gainT_' (preface <> "mdm-gain") (epwf [ Tuple 0.0 1.0, Tuple len 1.0, Tuple (len + 0.03) 0.0 ] tnow) (hpf $ playBufWithOffset_ (preface <> "mdm-buf") (mt2s dm) 1.0 offset))) dm') atod
 
@@ -2957,6 +2961,317 @@ toDrumz =
 manyThingsFoolsAndKingsThisHeSaidToMeDrumz :: Array SigAU
 manyThingsFoolsAndKingsThisHeSaidToMeDrumz = [ maDrumz, nyDrumz, thingsDrumz, foolsDrumz, andDrumz, kingsDrumz, thisDrumz, heDrumz, saidDrumz, toDrumz ]
 
+data SecondHalfHarmony
+  = AndBase0
+  | AndIntj0
+  | AndIntj1
+  | AndIntj2
+  | AndThenOneDayBase0
+  | AndThenOneDayBase1
+  | AndThenOneDayIntj0
+  | AndThenOneDayIntj1
+  | AndThenOneDayIntj2
+  | AndThenOneDayIntj3
+  | AndThenOneDayIntj4
+  | DayBase0
+  | FoolsAndKingsBase0
+  | FoolsAndKingsIntj0
+  | FoolsAndKingsIntj1
+  | HeBase0
+  | MagicBase0
+  | MagicIntj0
+  | MagicIntj1
+  | MagicIntj2
+  | ManyThingsBase0
+  | ManyThingsBase1
+  | ManyThingsBase2
+  | OfBase0
+  | OneBase0
+  | OneBase1
+  | OneIntj0
+  | OneIntj1
+  | PassedMyBase0
+  | PassedMyBase1
+  | PassedMyBase2
+  | PassedMyIntj0
+  | PassedMyIntj1
+  | PassedMyIntj2
+  | PassedMyIntj3
+  | PassedMyIntj4
+  | Rc0
+  | Rc1
+  | Rc10
+  | Rc11
+  | Rc12
+  | Rc13
+  | Rc14
+  | Rc15
+  | Rc2
+  | Rc3
+  | Rc4
+  | Rc5
+  | Rc6
+  | Rc7
+  | Rc8
+  | Rc9
+  | SpokeBase0
+  | ThisHeSaidToMeBase0
+  | ThisHeSaidToMeBase1
+  | ThisHeSaidToMeBase2
+  | ThisHeSaidToMeBase3
+  | ThisHeSaidToMeBase4
+  | ThisHeSaidToMeBase5
+  | WeBase0
+  | WhileBase0
+  | WhileWeSpokeOfBase0
+  | WhileWeSpokeOfIntj0
+  | WhileWeSpokeOfIntj1
+  | WhileWeSpokeOfPedal0
+
+instance eqSecondHalfHarmony :: Eq SecondHalfHarmony where
+  eq a b = eq (h2s a) (h2s b)
+
+instance showSecondHalfHarmony :: Show SecondHalfHarmony where
+  show = h2s
+
+h2s :: SecondHalfHarmony -> String
+h2s AndBase0 = "andBase0"
+
+h2s AndIntj0 = "andIntj0"
+
+h2s AndIntj1 = "andIntj1"
+
+h2s AndIntj2 = "andIntj2"
+
+h2s AndThenOneDayBase0 = "andThenOneDayBase0"
+
+h2s AndThenOneDayBase1 = "andThenOneDayBase1"
+
+h2s AndThenOneDayIntj0 = "andThenOneDayIntj0"
+
+h2s AndThenOneDayIntj1 = "andThenOneDayIntj1"
+
+h2s AndThenOneDayIntj2 = "andThenOneDayIntj2"
+
+h2s AndThenOneDayIntj3 = "andThenOneDayIntj3"
+
+h2s AndThenOneDayIntj4 = "andThenOneDayIntj4"
+
+h2s DayBase0 = "dayBase0"
+
+h2s FoolsAndKingsBase0 = "foolsAndKingsBase0"
+
+h2s FoolsAndKingsIntj0 = "foolsAndKingsIntj0"
+
+h2s FoolsAndKingsIntj1 = "foolsAndKingsIntj1"
+
+h2s HeBase0 = "heBase0"
+
+h2s MagicBase0 = "magicBase0"
+
+h2s MagicIntj0 = "magicIntj0"
+
+h2s MagicIntj1 = "magicIntj1"
+
+h2s MagicIntj2 = "magicIntj2"
+
+h2s ManyThingsBase0 = "manyThingsBase0"
+
+h2s ManyThingsBase1 = "manyThingsBase1"
+
+h2s ManyThingsBase2 = "manyThingsBase2"
+
+h2s OfBase0 = "ofBase0"
+
+h2s OneBase0 = "oneBase0"
+
+h2s OneBase1 = "oneBase1"
+
+h2s OneIntj0 = "oneIntj0"
+
+h2s OneIntj1 = "oneIntj1"
+
+h2s PassedMyBase0 = "passedMyBase0"
+
+h2s PassedMyBase1 = "passedMyBase1"
+
+h2s PassedMyBase2 = "passedMyBase2"
+
+h2s PassedMyIntj0 = "passedMyIntj0"
+
+h2s PassedMyIntj1 = "passedMyIntj1"
+
+h2s PassedMyIntj2 = "passedMyIntj2"
+
+h2s PassedMyIntj3 = "passedMyIntj3"
+
+h2s PassedMyIntj4 = "passedMyIntj4"
+
+h2s Rc0 = "rc0"
+
+h2s Rc1 = "rc1"
+
+h2s Rc10 = "rc10"
+
+h2s Rc11 = "rc11"
+
+h2s Rc12 = "rc12"
+
+h2s Rc13 = "rc13"
+
+h2s Rc14 = "rc14"
+
+h2s Rc15 = "rc15"
+
+h2s Rc2 = "rc2"
+
+h2s Rc3 = "rc3"
+
+h2s Rc4 = "rc4"
+
+h2s Rc5 = "rc5"
+
+h2s Rc6 = "rc6"
+
+h2s Rc7 = "rc7"
+
+h2s Rc8 = "rc8"
+
+h2s Rc9 = "rc9"
+
+h2s SpokeBase0 = "spokeBase0"
+
+h2s ThisHeSaidToMeBase0 = "thisHeSaidToMeBase0"
+
+h2s ThisHeSaidToMeBase1 = "thisHeSaidToMeBase1"
+
+h2s ThisHeSaidToMeBase2 = "thisHeSaidToMeBase2"
+
+h2s ThisHeSaidToMeBase3 = "thisHeSaidToMeBase3"
+
+h2s ThisHeSaidToMeBase4 = "thisHeSaidToMeBase4"
+
+h2s ThisHeSaidToMeBase5 = "thisHeSaidToMeBase5"
+
+h2s WeBase0 = "weBase0"
+
+h2s WhileBase0 = "whileBase0"
+
+h2s WhileWeSpokeOfBase0 = "whileWeSpokeOfBase0"
+
+h2s WhileWeSpokeOfIntj0 = "whileWeSpokeOfIntj0"
+
+h2s WhileWeSpokeOfIntj1 = "whileWeSpokeOfIntj1"
+
+h2s WhileWeSpokeOfPedal0 = "whileWeSpokeOfPedal0"
+
+type HarmWithPlacement
+  = Tuple SecondHalfHarmony Number
+
+type HarmWithPlacementAndWidth
+  = Tuple SecondHalfHarmony (Tuple Number Number)
+
+makeHarmonicInterjection :: String -> HarmWithPlacementAndWidth -> Number -> List (AudioUnit D2)
+makeHarmonicInterjection tag (Tuple shh (Tuple loc width)) = atT loc $ boundPlayer (width + 0.1) (\t -> pure $ gainT_' (tag <> "harmonicInterjectionGain") (epwf [ Tuple 0.0 0.0, Tuple 0.05 1.0, Tuple (width + 0.05) 1.0, Tuple (width + 0.1) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicInterjectionBuffer") (h2s shh) 1.0 (1.5 + (t % 1.0)))) -- t % 1.0 adds variance to start point
+
+makeHarmonicBase :: String -> Array (Tuple Number Number) -> Array HarmWithPlacement -> Number -> List (AudioUnit D2)
+makeHarmonicBase tag cuts a' = \time -> pure (gainT_ (tag <> "harmBaseGain") (if A.null cutpwf then defaultParam { param = 1.0 } else (epwf cutpwf time)) $ toNel (fold (map (\f -> f time) (mapWithIndex (\i (Tuple shh (Tuple st o)) -> atT st $ boundPlayer (o + 0.5) (\t -> pure $ gainT_' (tag <> show i <> "harmonicBaseGain") (epwf [ Tuple 0.0 1.0, Tuple o 1.0, Tuple (o + 0.5) 0.0 ] t) (playBuf_ (tag <> "harmonicBaseBuffer") (h2s shh) 1.0))) a))))
+  where
+  cutpwf = A.sortBy (\(Tuple x _) (Tuple y _) -> compare x y) (join $ map (\(Tuple o w) -> [ Tuple o 1.0, Tuple (o + 0.05) 0.0, Tuple (o + w + 0.05) 0.0, Tuple (o + w + 0.1) 1.0 ]) cuts)
+
+  a = foldOverTime (\clen (Tuple shh o) -> Tuple shh (Tuple clen o)) (\(Tuple _ o) -> o) a'
+
+mkSecondHalfHarm :: Marker -> Marker -> Array HarmWithPlacement -> Array HarmWithPlacementAndWidth -> SigAU
+mkSecondHalfHarm st ed base intj = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in fold (map (\f -> f time) l)
+  where
+  cuts = map (\(Tuple _ t) -> t) intj
+
+  l = [ makeHarmonicBase (m2s st <> m2s ed) cuts base ] <> map (makeHarmonicInterjection (m2s st <> m2s ed)) intj
+
+andThenOneH = mkSecondHalfHarm Then7 One7 [ Tuple AndThenOneDayBase0 2.0, Tuple AndThenOneDayBase1 1.0 ] [ Tuple AndThenOneDayIntj0 (Tuple 1.95 0.15) ] :: SigAU
+
+dayH = mkSecondHalfHarm Day7 Day7 [ Tuple AndThenOneDayBase0 2.0, Tuple AndThenOneDayBase1 1.0, Tuple AndThenOneDayBase0 0.5, Tuple AndThenOneDayBase1 2.0, Tuple AndThenOneDayBase0 0.3, Tuple AndThenOneDayBase1 0.3, Tuple AndThenOneDayBase0 10.0 ] [ Tuple AndThenOneDayIntj1 (Tuple 2.5 0.3), Tuple AndThenOneDayIntj2 (Tuple 3.2 0.2), Tuple AndThenOneDayIntj3 (Tuple 3.5 0.15), Tuple AndThenOneDayIntj4 (Tuple 3.81 0.12), Tuple AndThenOneDayIntj0 (Tuple 4.1 0.23) ] :: SigAU
+
+oneH = mkSecondHalfHarm One8 One8 [ Tuple OneBase0 0.5, Tuple OneBase1 10.0 ] [ Tuple OneIntj0 (Tuple 0.45 0.15) ] :: SigAU
+
+maGicH = mkSecondHalfHarm Ma8 Gic8 [ Tuple MagicBase0 0.7, Tuple MagicBase0 1.0, Tuple MagicBase0 5.0 ] [ Tuple MagicIntj1 (Tuple 1.6 0.15), Tuple MagicIntj1 (Tuple 1.7 0.15) ] :: SigAU
+
+day'H = mkSecondHalfHarm Day8 Day8 [ Tuple DayBase0 10.0 ] [] :: SigAU
+
+heH = mkSecondHalfHarm He8 He8 [ Tuple HeBase0 10.0 ] [] :: SigAU
+
+passedMyH = mkSecondHalfHarm Passed8 Passed8 [ Tuple PassedMyBase0 1.5, Tuple PassedMyBase1 5.0 ] [ Tuple PassedMyIntj0 (Tuple 1.1 0.3), Tuple PassedMyIntj1 (Tuple 1.3 0.3) ] :: SigAU
+
+wayH = mkSecondHalfHarm Way8 Way8 [ Tuple AndThenOneDayBase1 1.2, Tuple AndThenOneDayBase0 1.2, Tuple AndThenOneDayBase1 1.2, Tuple AndThenOneDayBase0 1.2, Tuple AndThenOneDayBase1 5.0 ] [ Tuple AndThenOneDayIntj1 (Tuple 0.4 0.2), Tuple AndThenOneDayIntj3 (Tuple 0.9 0.1), Tuple AndThenOneDayIntj2 (Tuple 1.3 0.1), Tuple AndThenOneDayIntj0 (Tuple 1.8 0.1), Tuple AndThenOneDayIntj2 (Tuple 2.4 0.4), Tuple AndThenOneDayIntj3 (Tuple 2.9 0.18), Tuple AndThenOneDayIntj1 (Tuple 3.15 0.18) ] :: SigAU
+
+andH = mkSecondHalfHarm And9 And9 [ Tuple AndBase0 4.0 ] [] :: SigAU
+
+whileH = mkSecondHalfHarm While9 And9 [ Tuple WhileBase0 4.0 ] [] :: SigAU
+
+weH = mkSecondHalfHarm We9 We9 [ Tuple WeBase0 4.0 ] [] :: SigAU
+
+spokeH = mkSecondHalfHarm Spoke9 Spoke9 [ Tuple SpokeBase0 4.0 ] [] :: SigAU
+
+ofH = mkSecondHalfHarm Of9 Of9 [ Tuple OfBase0 4.0 ] [] :: SigAU
+
+manyThingsH =
+  mkSecondHalfHarm Ma9 Things9 [ Tuple ManyThingsBase0 2.9, Tuple ManyThingsBase1 1.3, Tuple ManyThingsBase2 1.3, Tuple ManyThingsBase1 2.3, Tuple ManyThingsBase0 1.3, Tuple ManyThingsBase1 5.0 ]
+    [ Tuple Rc0 (Tuple 1.8 0.3)
+    , Tuple Rc1 (Tuple 2.9 0.3)
+    , Tuple Rc2 (Tuple 3.35 0.2)
+    , Tuple Rc3 (Tuple 3.8 0.2)
+    , Tuple Rc4 (Tuple 4.0 0.2)
+    , Tuple Rc5 (Tuple 4.15 0.3)
+    , Tuple Rc5 (Tuple 4.7 0.45)
+    , Tuple Rc6 (Tuple 5.3 0.15)
+    , Tuple Rc7 (Tuple 5.6 0.15)
+    , Tuple Rc5 (Tuple 5.7 0.45)
+    , Tuple Rc6 (Tuple 6.3 0.15)
+    , Tuple Rc7 (Tuple 6.6 0.15)
+    , Tuple Rc8 (Tuple 6.7 0.15)
+    , Tuple Rc9 (Tuple 6.9 0.15)
+    ] ::
+    SigAU
+
+foolsAndKingsH =
+  mkSecondHalfHarm Ma9 Things9 [ Tuple FoolsAndKingsBase0 14.0 ]
+    (mapWithIndex (\i v -> Tuple v (Tuple (toNumber (i + 1) * 0.8) 0.5)) [ FoolsAndKingsIntj0, FoolsAndKingsIntj1, FoolsAndKingsIntj0, FoolsAndKingsIntj1, FoolsAndKingsIntj0, FoolsAndKingsIntj1, FoolsAndKingsIntj0, FoolsAndKingsIntj1 ]) ::
+    SigAU
+
+makePedal :: String -> Marker -> Marker -> SigAU
+makePedal name st ed = boundByCue'' st ed (pure $ playBuf_ (name <> "Buf") name 1.0)
+
+manyThingsPedal = makePedal "manyThingsPedal0" Ma9 Things9 :: SigAU
+
+foolsAndKingsPedal = makePedal "manyThingsPedal1" Fools10 Kings10 :: SigAU
+
+thisHeSaidToMePedal = makePedal "manyThingsPedal2" This11 Me11 :: SigAU
+
+thstmMachine :: Marker -> Marker -> Number -> Array String -> SigAU
+thstmMachine st ed gap bufz =
+  boundByCueWithOnset And7 And7
+    (\ac onset m t' -> let time = t' - onset in fold (map (\f -> f time) (mapWithIndex (\i s -> atT (toNumber i * gap) $ boundPlayer (gap + 0.04) (\t -> pure (gainT_' (m2s st <> show i <> "gain") (epwf [ Tuple 0.0 1.0, Tuple (gap - 0.02) 1.0, Tuple (gap + 0.02) 0.0 ] t) (playBufWithOffset_ (m2s st <> show i <> "buf") s 1.0 (0.5 + (t' % 1.0)))))) bufz))) -- use t' for modulo
+
+thisFinal = thstmMachine This11 This11 0.35 [ "thisHeSaidToMeBase0", "thisHeSaidToMeBase1", "thisHeSaidToMeBase2", "thisHeSaidToMeBase1", "thisHeSaidToMeBase2", "thisHeSaidToMeBase0", "thisHeSaidToMeBase0", "thisHeSaidToMeBase1", "thisHeSaidToMeBase0", "thisHeSaidToMeBase2", "thisHeSaidToMeBase1" ] :: SigAU
+
+heFinal = thstmMachine He11 He11 0.29 [ "finalHe0", "finalHe0", "finalHe1", "finalHe0", "finalHe1", "finalHe0", "finalHe0" ] :: SigAU
+
+saidFinal = thstmMachine Said11 Said11 0.24 [ "finalSaid0", "finalSaid0", "finalSaid1", "finalSaid0", "finalSaid1", "finalSaid0", "finalSaid1" ] :: SigAU
+
+toFinal = thstmMachine To11 To11 0.2 [ "finalTo0", "finalTo0", "finalTo1", "finalTo0", "finalTo1", "finalTo0", "finalTo1" ] :: SigAU
+
+meFinal :: SigAU
+meFinal =
+  boundByCueWithOnset Me11 Thing12
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' ("FinalMeGain") (1.0 - (0.15 * time)) (loopBuf_ ("FinalMeBuf") "finalMe" 1.0 (1.6 + 0.6 * sin (time * pi)) (5.0 + 2.0 * sin (time * pi))))
+    )
+
+secondHalfHarmony = [ andThenOneH, dayH, oneH, maGicH, day'H, heH, passedMyH, wayH, andH, whileH, weH, spokeH, ofH, manyThingsPedal, foolsAndKingsPedal, thisHeSaidToMePedal, manyThingsH, foolsAndKingsH, thisFinal, heFinal, saidFinal, toFinal, meFinal ] :: Array SigAU
+
 natureBoy =
   [ there0
   , was0
@@ -3046,7 +3361,8 @@ natureBoy =
     <> theySayHeWanderedBuildup
     <> secondPartBP
     <> secondPartVocalsUsingRig
-    <> manyThingsFoolsAndKingsThisHeSaidToMeDrumz ::
+    <> manyThingsFoolsAndKingsThisHeSaidToMeDrumz
+    <> secondHalfHarmony ::
     Array SigAU
 
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
@@ -3280,6 +3596,107 @@ main =
         , Tuple "impro-glitch" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/improGlitch.ogg"
         , Tuple "impro-wobbly" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/improWobblyGlitch.ogg"
         , Tuple "impro-filigree" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/improFiligree.ogg"
+        -- endharm
+        , Tuple "andBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andBase0.ogg"
+        , Tuple "andIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andIntj0.ogg"
+        , Tuple "andIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andIntj1.ogg"
+        , Tuple "andIntj2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andIntj2.ogg"
+        , Tuple "andThenOneDayBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayBase0.ogg"
+        , Tuple "andThenOneDayBase1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayBase1.ogg"
+        , Tuple "andThenOneDayIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayIntj0.ogg"
+        , Tuple "andThenOneDayIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayIntj1.ogg"
+        , Tuple "andThenOneDayIntj2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayIntj2.ogg"
+        , Tuple "andThenOneDayIntj3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayIntj3.ogg"
+        , Tuple "andThenOneDayIntj4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andThenOneDayIntj4.ogg"
+        , Tuple "dayBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/dayBase0.ogg"
+        , Tuple "finalHe0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalHe0.ogg"
+        , Tuple "finalHe1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalHe1.ogg"
+        , Tuple "finalMe" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalMe.ogg"
+        , Tuple "finalSaid0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalSaid0.ogg"
+        , Tuple "finalSaid1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalSaid1.ogg"
+        , Tuple "finalTo0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalTo0.ogg"
+        , Tuple "finalTo1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/finalTo1.ogg"
+        , Tuple "foolsAndKingsBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/foolsAndKingsBase0.ogg"
+        , Tuple "foolsAndKingsIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/foolsAndKingsIntj0.ogg"
+        , Tuple "foolsAndKingsIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/foolsAndKingsIntj1.ogg"
+        , Tuple "heBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/heBase0.ogg"
+        , Tuple "magicBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/magicBase0.ogg"
+        , Tuple "magicIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/magicIntj0.ogg"
+        , Tuple "magicIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/magicIntj1.ogg"
+        , Tuple "magicIntj2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/magicIntj2.ogg"
+        , Tuple "manyThingsBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/manyThingsBase0.ogg"
+        , Tuple "manyThingsBase1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/manyThingsBase1.ogg"
+        , Tuple "manyThingsBase2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/manyThingsBase2.ogg"
+        , Tuple "manyThingsPedal0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/manyThingsPedal0.ogg"
+        , Tuple "manyThingsPedal1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/manyThingsPedal1.ogg"
+        , Tuple "manyThingsPedal2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/manyThingsPedal2.ogg"
+        , Tuple "ofBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/ofBase0.ogg"
+        , Tuple "oneBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/oneBase0.ogg"
+        , Tuple "oneBase1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/oneBase1.ogg"
+        , Tuple "oneIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/oneIntj0.ogg"
+        , Tuple "oneIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/oneIntj1.ogg"
+        , Tuple "passedMyBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyBase0.ogg"
+        , Tuple "passedMyBase1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyBase1.ogg"
+        , Tuple "passedMyBase2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyBase2.ogg"
+        , Tuple "passedMyIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyIntj0.ogg"
+        , Tuple "passedMyIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyIntj1.ogg"
+        , Tuple "passedMyIntj2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyIntj2.ogg"
+        , Tuple "passedMyIntj3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyIntj3.ogg"
+        , Tuple "passedMyIntj4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/passedMyIntj4.ogg"
+        , Tuple "rc0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc0.ogg"
+        , Tuple "rc1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc1.ogg"
+        , Tuple "rc10" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc10.ogg"
+        , Tuple "rc11" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc11.ogg"
+        , Tuple "rc12" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc12.ogg"
+        , Tuple "rc13" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc13.ogg"
+        , Tuple "rc14" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc14.ogg"
+        , Tuple "rc15" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc15.ogg"
+        , Tuple "rc2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc2.ogg"
+        , Tuple "rc3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc3.ogg"
+        , Tuple "rc4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc4.ogg"
+        , Tuple "rc5" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc5.ogg"
+        , Tuple "rc6" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc6.ogg"
+        , Tuple "rc7" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc7.ogg"
+        , Tuple "rc8" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc8.ogg"
+        , Tuple "rc9" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/rc9.ogg"
+        , Tuple "spokeBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/spokeBase0.ogg"
+        , Tuple "thisHeSaidToMeBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/thisHeSaidToMeBase0.ogg"
+        , Tuple "thisHeSaidToMeBase1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/thisHeSaidToMeBase1.ogg"
+        , Tuple "thisHeSaidToMeBase2" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/thisHeSaidToMeBase2.ogg"
+        , Tuple "thisHeSaidToMeBase3" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/thisHeSaidToMeBase3.ogg"
+        , Tuple "thisHeSaidToMeBase4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/thisHeSaidToMeBase4.ogg"
+        , Tuple "thisHeSaidToMeBase5" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/thisHeSaidToMeBase5.ogg"
+        , Tuple "weBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/weBase0.ogg"
+        , Tuple "whileBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/whileBase0.ogg"
+        , Tuple "whileWeSpokeOfBase0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/whileWeSpokeOfBase0.ogg"
+        , Tuple "whileWeSpokeOfIntj0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/whileWeSpokeOfIntj0.ogg"
+        , Tuple "whileWeSpokeOfIntj1" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/whileWeSpokeOfIntj1.ogg"
+        , Tuple "whileWeSpokeOfPedal0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/whileWeSpokeOfPedal0.ogg"
+        , Tuple "andBeBuzzheng" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andBeBuzzheng.ogg"
+        -- endgame
+        , Tuple "andBeFlange" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andBeFlange.ogg"
+        , Tuple "andBeLovedInRe" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andBeLovedInRe.ogg"
+        , Tuple "andBeNylon" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andBeNylon.ogg"
+        , Tuple "andBeShamisen" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andBeShamisen.ogg"
+        , Tuple "isJustToBuzzheng" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/isJustToBuzzheng.ogg"
+        , Tuple "isJustToFlange" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/isJustToFlange.ogg"
+        , Tuple "isJustToLove" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/isJustToLove.ogg"
+        , Tuple "isJustToNylon" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/isJustToNylon.ogg"
+        , Tuple "isJustToShamisen" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/isJustToShamisen.ogg"
+        , Tuple "theGreatestBuzzheng" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/theGreatestBuzzheng.ogg"
+        , Tuple "theGreatestFlange" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/theGreatestFlange.ogg"
+        , Tuple "theGreatestNylon" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/theGreatestNylon.ogg"
+        , Tuple "theGreatestShamisen" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/theGreatestShamisen.ogg"
+        , Tuple "theGreatestThing" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/theGreatestThing.ogg"
+        , Tuple "turn" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/turn.ogg"
+        , Tuple "turnBuzzheng" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/turnBuzzheng.ogg"
+        , Tuple "turnFlange" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/turnFlange.ogg"
+        , Tuple "turnNylon" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/turnNylon.ogg"
+        , Tuple "youllEverBuzzheng" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverBuzzheng.ogg"
+        , Tuple "youllEverFlange" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverFlange.ogg"
+        , Tuple "youllEverLearn" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverLearn.ogg"
+        , Tuple "youllEverNylon" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverNylon.ogg"
+        , Tuple "youllEverShamisen" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverShamisen.ogg"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
