@@ -35,7 +35,6 @@ import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
 import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
-import Klank.LowDrone (skewedTriangle01)
 import Math (abs, cos, pi, pow, sin, (%))
 import Record.Extra (SLProxy(..), SNil)
 import Type.Data.Graph (type (:/))
