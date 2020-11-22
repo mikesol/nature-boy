@@ -29,7 +29,7 @@ import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker, waveShaper_)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, panner_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker, waveShaper_)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -3088,7 +3088,7 @@ shredderImpro buf len stgn st ed =
         let
           time = t - onset
         in
-          pure (gain_' ("shredderImproGn" <> tg) (shredderTf stgn len time * shredderDropout time) (highpass_ ("shredderImproFilt" <> tg) (400.0 + (5000.0 * len / time)) 5.0 (loopBuf_ ("shredderImproBuf" <> tg) buf (1.0 + 0.15 * ((time * 1.5) % 1.0)) 0.0 0.0)))
+          pure (panner_ "pannerShredder" (sin (pi * time * 0.2)) $ gain_' ("shredderImproGn" <> tg) (shredderTf stgn len time * shredderDropout time) (highpass_ ("shredderImproFilt" <> tg) (400.0 + (5000.0 * len / time)) 5.0 (loopBuf_ ("shredderImproBuf" <> tg) buf (1.0 + 0.15 * ((time * 1.5) % 1.0)) 0.0 0.0)))
     )
   where
   tg = m2s st <> m2s ed
