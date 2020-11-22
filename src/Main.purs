@@ -3055,6 +3055,46 @@ toDrumz =
 manyThingsFoolsAndKingsThisHeSaidToMeDrumz :: Array SigAU
 manyThingsFoolsAndKingsThisHeSaidToMeDrumz = [ maDrumz, nyDrumz, thingsDrumz, foolsDrumz, andDrumz, kingsDrumz, thisDrumz, heDrumz, saidDrumz, toDrumz ]
 
+shredderTf :: Number -> Number -> Number -> Number
+shredderTf stgn len time
+  | time < 1.0 = stgn * time
+  | time < len = stgn - ((time - 1.0) * stgn / (len - 1.0))
+  | otherwise = 0.0
+
+shredderDropout :: Number -> Number
+shredderDropout n
+  | n < 0.8 = 1.0
+  | n < 0.86 = 0.0
+  | n < 1.3 = 1.0
+  | n < 1.35 = 0.0
+  | n < 2.1 = 1.0
+  | n < 2.15 = 0.0
+  | n < 3.0 = 1.0
+  | n < 3.05 = 0.0
+  | n < 4.6 = 1.0
+  | n < 4.65 = 0.0
+  | n < 4.9 = 1.0
+  | n < 4.95 = 0.0
+  | n < 5.0 = 1.0
+  | n < 5.05 = 0.0
+  | n < 5.6 = 1.0
+  | n < 5.65 = 0.0
+  | otherwise = 1.0
+
+shredderImpro :: String -> Number -> Number -> Marker -> Marker -> SigAU
+shredderImpro buf len stgn st ed =
+  boundByCueWithOnset st ed
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' ("shredderImproGn" <> tg) (shredderTf stgn len time * shredderDropout time) (highpass_ ("shredderImproFilt" <> tg) (400.0 + (5000.0 * len / time)) 5.0 (loopBuf_ ("shredderImproBuf" <> tg) buf (1.0 + 0.15 * ((time * 1.5) % 1.0)) 0.0 0.0)))
+    )
+  where
+  tg = m2s st <> m2s ed
+
+shredderManyThings = shredderImpro "nice-high-shred" 20.0 0.4 Ny9 Me11 :: SigAU
+
 data SecondHalfHarmony
   = AndBase0
   | AndIntj0
@@ -3439,6 +3479,7 @@ natureBoy =
   , improGlitch
   , improWobble
   , improFiligree
+  , shredderManyThings
   , maVoice
   , ny9Voice
   , thingsVoice
@@ -3649,10 +3690,10 @@ main =
         --, Tuple "robin" "https://freesound.org/data/previews/416/416529_5121236-hq.mp3"
         ------------- shredders
         -- second half good... nice and gear-y
-        , Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-hq.mp3"
-        , Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-hq.mp3"
-        , Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-hq.mp3"
-        , Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-hq.mp3"
+        --, Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-hq.mp3"
+        --, Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-hq.mp3"
+        --, Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-hq.mp3"
+        --, Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-hq.mp3"
         , Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-hq.mp3"
         -------------------- egg timer
         --, Tuple "egg-timer-wind-plus-ring" "https://freesound.org/data/previews/14/14263_31076-hq.mp3"
