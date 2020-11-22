@@ -35,6 +35,7 @@ import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
 import Graphics.Drawing (Drawing, Point, fillColor, filled, rectangle, text)
 import Graphics.Drawing.Font (FontOptions, bold, font, italic, sansSerif)
+import Klank.LowDrone (skewedTriangle01)
 import Math (abs, cos, pi, pow, sin, (%))
 import Record.Extra (SLProxy(..), SNil)
 import Type.Data.Graph (type (:/))
@@ -634,7 +635,7 @@ veryWiseWasBassoon =
         let
           time = t - onset
         in
-          pure (gain_' "bassoonVeryWiseGain" (max 0.0 (1.0 - 0.25 * (t - onset))) (lowpass_ "bassoonVeryWiseLowpass" (50.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
+          pure (gain_' "bassoonVeryWiseGain" (skewedTriangle01 0.3 5.0 time) (lowpass_ "bassoonVeryWiseLowpass" (50.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
     )
 
 veryWiseWasSkiddaw :: SigAU
@@ -3093,7 +3094,7 @@ shredderImpro buf len stgn st ed =
   where
   tg = m2s st <> m2s ed
 
-shredderManyThings = shredderImpro "nice-high-shred" 20.0 0.4 Ny9 Me11 :: SigAU
+shredderManyThings = shredderImpro "nice-high-shred" 20.0 0.9 Ny9 Me11 :: SigAU
 
 data SecondHalfHarmony
   = AndBase0
@@ -3309,7 +3310,7 @@ makeHarmonicInterjection :: String -> HarmWithPlacementAndWidth -> Number -> Lis
 makeHarmonicInterjection tag (Tuple shh (Tuple loc width)) = atT loc $ boundPlayer (width + 0.1) (\t -> pure $ gainT_' (tag <> "harmonicInterjectionGain") (epwf [ Tuple 0.0 0.0, Tuple 0.05 1.0, Tuple (width + 0.05) 1.0, Tuple (width + 0.1) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicInterjectionBuffer") (h2s shh) 1.0 (1.5 + (t % 1.0)))) -- t % 1.0 adds variance to start point
 
 makeHarmonicBase :: String -> Array (Tuple Number Number) -> Array HarmWithPlacement -> Number -> List (AudioUnit D2)
-makeHarmonicBase tag cuts a' = \time -> pure (gainT_ (tag <> "harmBaseGain") (if A.null cutpwf then defaultParam { param = 1.0 } else (epwf cutpwf time)) $ toNel (fold (map (\f -> f time) (mapWithIndex (\i (Tuple shh (Tuple st o)) -> atT st $ boundPlayer (o + 0.5) (\t -> pure $ gainT_' (tag <> show i <> "harmonicBaseGain") (epwf [ Tuple 0.0 1.0, Tuple o 1.0, Tuple (o + 0.5) 0.0 ] t) (playBuf_ (tag <> "harmonicBaseBuffer") (h2s shh) 1.0))) a))))
+makeHarmonicBase tag cuts a' = \time -> pure (gainT_ (tag <> "harmBaseGain") (if A.null cutpwf then defaultParam { param = 1.0 } else (epwf cutpwf time)) $ toNel (fold (map (\f -> f time) (mapWithIndex (\i (Tuple shh (Tuple st o)) -> atT st $ boundPlayer (o + 0.5) (\t -> pure $ gainT_' (tag <> show i <> "harmonicBaseGain") (epwf [ Tuple 0.0 0.0, Tuple 0.2 1.0, Tuple o 1.0, Tuple (o + 0.5) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicBaseBuffer") (h2s shh) 1.0 0.6))) a))))
   where
   cutpwf = A.sortBy (\(Tuple x _) (Tuple y _) -> compare x y) (join $ map (\(Tuple o w) -> [ Tuple o 1.0, Tuple (o + 0.05) 0.0, Tuple (o + w + 0.05) 0.0, Tuple (o + w + 0.1) 1.0 ]) cuts)
 
@@ -3603,7 +3604,7 @@ main =
         -- revcym
         , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
         -- drumz
-        , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.ogg"
+        , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.mp3"
         , Tuple "drumz-cat-55" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs55.ogg"
         , Tuple "drumz-cat-80" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs80.ogg"
         , Tuple "drumz-cat-100" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs100.ogg"

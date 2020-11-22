@@ -1,7 +1,8 @@
 module NatureBoy.Bufs where
 
-import Data.Tuple (Tuple)
+import Data.Tuple (Tuple(..))
 
+bufs :: Array (Tuple String String)
 bufs =
   [ Tuple "low-g#" "https://freesound.org/data/previews/195/195285_3623377-hq.mp3"
   -- impros
@@ -11,7 +12,7 @@ bufs =
   -- revcym
   , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
   -- drumz
-  , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.ogg"
+  , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.mp3"
   , Tuple "drumz-cat-55" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs55.ogg"
   , Tuple "drumz-cat-80" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs80.ogg"
   , Tuple "drumz-cat-100" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs100.ogg"
