@@ -1215,7 +1215,7 @@ veRyStrangeEnChanTedBoyHH :: String -> Number -> Number -> Number -> Marker -> M
 veRyStrangeEnChanTedBoyHH tag gn hpf rate st ed =
   boundByCueWithOnset st ed
     ( \ac onset m t -> let time = t - onset in
-        pure (gain_' (tag <> "veryStrangeGain") (max 0.0 $ gn - (0.1 * time)) (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
+        pure (gain_' (tag <> "veryStrangeGain") (max 0.0 $ gn - (0.06 * time)) (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
     )
 
 veHH = veRyStrangeEnChanTedBoyHH "ve" 0.06 2000.0 0.8 Ve1 Ve1 :: SigAU
