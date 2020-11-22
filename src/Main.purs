@@ -570,14 +570,14 @@ alsAccomp tag st ed =
         let
           time = t - onset
         in
-          pure (bandpass_ (tag <> "ALittleShyBandpass") (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ (tag <> "ALittleShyBuf") tag 1.0 (0.6 + 0.6 * sin (time * pi)) (3.248 + 0.6 * sin (time * pi)))
+          pure (bandpass_ (tag <> "ALittleShyBandpass") (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ (tag <> "ALittleShyBuf") tag 1.0 0.0 0.0 ) -- (0.6 + 0.6 * sin (time * pi)) (3.248 + 0.6 * sin (time * pi))
     )
 
-preALittleShyAccomp = alsAccomp "pre-a-little-shy" Sea4 Sea4 :: SigAU
+preALittleShyAccomp = alsAccomp "pre-a-little-shy" Sea4 A5 :: SigAU
 
-aLittleShyAccomp = alsAccomp "a-little-shy" A5 Shy5 :: SigAU
+aLittleShyAccomp = alsAccomp "a-little-shy" A5 And5 :: SigAU
 
-andSadOfEyeAccomp = alsAccomp "and-sad-of-eye" And5 Eye5 :: SigAU
+andSadOfEyeAccomp = alsAccomp "and-sad-of-eye" And5 But6 :: SigAU
 
 butVeryWiseWasAccomp = alsAccomp "but-very-wise-was" But6 Was6 :: SigAU
 
@@ -3098,7 +3098,7 @@ shredderImpro buf len stgn st ed =
         let
           time = t - onset
         in
-          pure (panner_ "pannerShredder" (sin (pi * time * 0.2)) $ gain_' ("shredderImproGn" <> tg) (shredderTf stgn len time * shredderDropout time) (highpass_ ("shredderImproFilt" <> tg) (400.0 + (5000.0 * len / time)) 5.0 (loopBuf_ ("shredderImproBuf" <> tg) buf (1.0 + 0.15 * ((time * 1.5) % 1.0)) 0.0 0.0)))
+          pure (panner_ "pannerShredder" (sin (pi * time * 0.2)) $ gain_' ("shredderImproGn" <> tg) (shredderTf stgn len time * shredderDropout time) (highpass_ ("shredderImproFilt" <> tg) (400.0 + (5000.0 * time / len)) 5.0 (loopBuf_ ("shredderImproBuf" <> tg) buf (1.0 + 0.15 * ((time * 1.5) % 1.0)) 0.0 0.0)))
     )
   where
   tg = m2s st <> m2s ed
