@@ -994,17 +994,17 @@ singleLowGSharpCello s time =
   )
 
 tshwvfGong :: String -> Marker -> Marker -> Number -> SigAU
-tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (playBuf_ (buf <> "GongPlayer") buf 1.0))) time
+tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (highpass_ (buf <> "GongHPF") 1300.0 4.0 (playBuf_ (buf <> "GongPlayer") buf 1.0))) time)
 
-theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.0 :: SigAU
+theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.3 :: SigAU
 
-sayGong = tshwvfGong "kettle-a-3" Say2 Wan2 0.0 :: SigAU
+sayGong = tshwvfGong "kettle-a-3" Say2 Wan2 0.3 :: SigAU
 
-heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.0 :: SigAU
+heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.3 :: SigAU
 
-wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.0 :: SigAU
+wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.3 :: SigAU
 
-deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.0 :: SigAU
+deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.3 :: SigAU
 
 --
 nylonPlayer :: String -> Marker -> Marker -> Marker -> SigAU
