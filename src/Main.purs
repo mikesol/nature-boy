@@ -647,6 +647,59 @@ veryWiseWasSkiddaw =
           pure (gain_' "skiddawVeryWiseGain" (1.0) (playBuf_ "skiddawVeryWiseBuf" "skiddaw-low-d" 1.0))
     )
 
+--
+tgtyelMain :: String -> Marker -> Marker -> SigAU
+tgtyelMain buf st ed = boundByCue'' st ed (pure (gain_' ("tgtyelMainGain" <> buf) (0.65) (playBuf_ ("tgtyelMainBuf" <> buf) buf 1.0)))
+
+theGreatestThing = tgtyelMain "theGreatestThing" Me11 Ver12 :: SigAU
+
+youllEverLearn = tgtyelMain "youllEverLearn" Learn12 To13 :: SigAU
+
+isJustToLove = tgtyelMain "isJustToLove" Love13 And13 :: SigAU
+
+andBeLovedInRe = tgtyelMain "andBeLovedInRe" Be13 Re13 :: SigAU
+
+turn = boundByCueWithOnset Turn13 Turn13 (\ac onset m t -> let time = t - onset in pure (gain_' ("turnGain") (0.65 - (time * 0.08)) (playBuf_ ("turnBuf") "turn" 1.0))) :: SigAU
+
+tgtyelMains = [ theGreatestThing, youllEverLearn, isJustToLove, andBeLovedInRe, turn ] :: Array SigAU
+
+--
+filteredPluckedOutro :: String -> Number -> (Number -> Number) -> Marker -> Marker -> (Number -> AudioUnit D2 -> AudioUnit D2) -> SigAU
+filteredPluckedOutro buf os gn st ed filt = boundByCueWithOnset st ed (\ac onset m t -> let time' = t - onset in (atT os $ overZeroPlayer (\time -> pure (gain_' ("filteredPluckedGain" <> buf) (gn time) ((filt time) (loopBuf_ ("filteredPluckedOutroLoopBuf" <> buf) buf 1.0 0.0 (3.0 + 2.0 * sin (time * pi * 0.5))))))) time')
+
+theGreatestShamisen = filteredPluckedOutro "theGreatestShamisen" 0.5 (const 0.65) Me11 You'll12 (\t -> highpass_ "theGreatestShamisenHPF" (400.0 + (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+theGreatestBuzzheng = filteredPluckedOutro "theGreatestBuzzheng" 2.9 (\t -> if t > 10.0 then (max 0.0 (0.65 - (0.2 * (t - 10.0)))) else 0.65) The12 Learn12 (\t -> lowpass_ "theGreatestBuzzhengLPF" (3200.0 - (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+theGreatestFlange = filteredPluckedOutro "theGreatestFlange" 4.1 (const 0.2) Great12 Ver12 (\t -> bandpass_ "theGreatestFlangeBP" (1000.0) (min 17.0 (1.0 + t * 2.0))) :: SigAU
+
+youllEverBuzzheng = filteredPluckedOutro "youllEverBuzzheng" 0.5 (const 0.65) Learn12 Is13 (\t -> highpass_ "youllEverBuzzhengHPF" (400.0 + (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+youllEverFlange = filteredPluckedOutro "youllEverFlange" 2.9 (const 0.65) Learn12 Just13 (\t -> lowpass_ "youllEverFlangeLPF" (3200.0 - (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+youllEverShamisen = filteredPluckedOutro "youllEverShamisen" 4.1 (const 0.2) Learn12 To13 (\t -> bandpass_ "youllEverShamisenBP" (1000.0) (min 17.0 (1.0 + t * 2.0))) :: SigAU
+
+isJustToFlange = filteredPluckedOutro "isJustToFlange" 0.5 (const 0.65) Love13 And13 (\t -> highpass_ "isJustToFlangeHPF" (400.0 + (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+isJustToShamisen = filteredPluckedOutro "isJustToShamisen" 2.9 (const 0.65) Love13 Be13 (\t -> lowpass_ "isJustToShamisenLPF" (3200.0 - (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+isJustToBuzzheng = filteredPluckedOutro "isJustToBuzzheng" 4.1 (const 0.2) Love13 Loved13 (\t -> bandpass_ "isJustToBuzzhengBP" (1000.0) (min 17.0 (1.0 + t * 2.0))) :: SigAU
+
+andBeShamisen = filteredPluckedOutro "andBeShamisen" 0.5 (\t -> if t > 6.0 then (0.65 - (0.13 * (t - 6.0))) else 0.65) Be13 Turn13 (\t -> highpass_ "andBeShamisenHPF" (400.0 + (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+andBeBuzzheng = filteredPluckedOutro "andBeBuzzheng" 2.9 (const 0.65) Be13 In13 (\t -> lowpass_ "andBeBuzzhengLPF" (3200.0 - (min 3000.0 (t * 400.0))) (min 10.0 (1.0 + t))) :: SigAU
+
+andBeFlange = filteredPluckedOutro "andBeFlange" 4.1 (\t -> 0.2 - (t * 0.05)) Be13 Re13 (\t -> bandpass_ "andBeFlangeBP" (1000.0) (min 17.0 (1.0 + t * 2.0))) :: SigAU
+
+turnShamisen = filteredPluckedOutro "turnShamisen" 0.0 (\t -> max 0.0 $ 0.45 - (t * 0.05)) Turn13 Turn13 (\t -> highpass_ "turnShamisenHPF" 3400.0 10.0) :: SigAU
+
+turnBuzzheng = filteredPluckedOutro "turnBuzzheng" 1.9 (\t -> max 0.0 $ 0.45 - (t * 0.05)) Turn13 Turn13 (\t -> lowpass_ "turnBuzzhengLPF" 200.0 10.0) :: SigAU
+
+turnFlange = filteredPluckedOutro "turnFlange" 3.6 (\t -> max 0.0 $ 0.2 - (t * 0.03)) Turn13 Turn13 (\t -> bandpass_ "turnFlangeBP" 1000.0 17.0) :: SigAU
+
+tgtyelAccomps = [ theGreatestShamisen, theGreatestBuzzheng, theGreatestFlange, youllEverShamisen, youllEverBuzzheng, youllEverFlange, isJustToShamisen, isJustToBuzzheng, isJustToFlange, andBeShamisen, andBeBuzzheng, andBeFlange, turnShamisen, turnBuzzheng, turnFlange ] :: Array SigAU
+
+--
 outroFlagBang :: SigAU
 outroFlagBang =
   boundByCueWithOnset Me11 Turn13
@@ -3406,7 +3459,9 @@ natureBoy =
     <> secondPartVocalsUsingRig
     <> manyThingsFoolsAndKingsThisHeSaidToMeDrumz
     <> secondHalfHarmony
-    <> nylonEnd ::
+    <> nylonEnd
+    <> tgtyelMains
+    <> tgtyelAccomps ::
     Array SigAU
 
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
