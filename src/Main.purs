@@ -1218,19 +1218,19 @@ veRyStrangeEnChanTedBoyHH tag gn hpf rate st ed =
         pure (gain_' (tag <> "veryStrangeGain") (max 0.0 $ gn - (0.1 * time)) (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
     )
 
-veHH = veRyStrangeEnChanTedBoyHH "ve" 0.3 2000.0 0.8 Ve1 Ve1 :: SigAU
+veHH = veRyStrangeEnChanTedBoyHH "ve" 0.06 2000.0 0.8 Ve1 Ve1 :: SigAU
 
-ryHH = veRyStrangeEnChanTedBoyHH "ry" 0.3 2000.0 0.84 Ry1 Ry1 :: SigAU
+ryHH = veRyStrangeEnChanTedBoyHH "ry" 0.1 2000.0 0.84 Ry1 Ry1 :: SigAU
 
-strangeHH = veRyStrangeEnChanTedBoyHH "ry" 0.4 1000.0 0.88 Strange1 Strange1 :: SigAU
+strangeHH = veRyStrangeEnChanTedBoyHH "ry" 0.25 1000.0 0.88 Strange1 Strange1 :: SigAU
 
-enHH = veRyStrangeEnChanTedBoyHH "ry" 0.5 800.0 0.95 En1 En1 :: SigAU
+enHH = veRyStrangeEnChanTedBoyHH "ry" 0.4 800.0 0.95 En1 En1 :: SigAU
 
-chanHH = veRyStrangeEnChanTedBoyHH "ry" 0.7 400.0 1.0 Chan1 Chan1 :: SigAU
+chanHH = veRyStrangeEnChanTedBoyHH "ry" 0.5 400.0 1.0 Chan1 Chan1 :: SigAU
 
-tedHH = veRyStrangeEnChanTedBoyHH "ry" 0.3 1500.0 0.85 Ted1 Ted1 :: SigAU
+tedHH = veRyStrangeEnChanTedBoyHH "ry" 0.2 1500.0 0.85 Ted1 Ted1 :: SigAU
 
-boyHH = veRyStrangeEnChanTedBoyHH "ry" 0.1 3000.0 0.8 Boy1 Boy1 :: SigAU
+boyHH = veRyStrangeEnChanTedBoyHH "ry" 0.05 3000.0 0.8 Boy1 Boy1 :: SigAU
 
 veRyStrangeEnChanTedBoyHHs =
   [ veHH
