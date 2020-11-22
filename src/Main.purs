@@ -1214,8 +1214,8 @@ chanTed =
 veRyStrangeEnChanTedBoyHH :: String -> Number -> Number -> Number -> Marker -> Marker -> SigAU
 veRyStrangeEnChanTedBoyHH tag gn hpf rate st ed =
   boundByCueWithOnset st ed
-    ( \ac onset m t ->
-        pure (gain_' (tag <> "veryStrangeGain") gn (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
+    ( \ac onset m t -> let time = t - onset in
+        pure (gain_' (tag <> "veryStrangeGain") (max 0.0 $ gn - (0.1 * time)) (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
     )
 
 veHH = veRyStrangeEnChanTedBoyHH "ve" 0.3 2000.0 0.8 Ve1 Ve1 :: SigAU
@@ -1868,7 +1868,7 @@ improGlitch =
         let
           time = t - onset
         in
-          pure (gainT_' "improGlitchGain" (epwf [ Tuple 0.0 0.0, Tuple 0.4 0.3, Tuple 5.0 1.0, Tuple 5.04 0.07, Tuple 10.0 0.07, Tuple 13.0 1.0, Tuple 15.0 1.0, Tuple 15.4 0.07, Tuple 20.0 0.07, Tuple 26.0 1.0, Tuple 31.0 1.0, Tuple 31.02 0.07, Tuple 33.0 0.07, Tuple 33.05 1.0, Tuple 33.38 1.0, Tuple 33.44 0.13, Tuple 36.0 0.07, Tuple 40.0 0.13, Tuple 48.1 0.13, Tuple 50.0 0.7, Tuple 54.3 0.7, Tuple 55.0 0.1, Tuple 57.0 0.0, Tuple 63.0 0.0, Tuple 66.0 0.1, Tuple 71.0 0.1, Tuple 71.2 0.0, Tuple 74.0 0.0, Tuple 74.2 0.6, Tuple 74.8 0.2, Tuple 90.0 0.0 ] time) (playBuf_ "improGlitchBuf" "impro-glitch" 1.0))
+          pure (gainT_' "improGlitchGain" (epwf [ Tuple 0.0 0.0, Tuple 0.4 0.3, Tuple 5.0 1.0, Tuple 5.04 0.07, Tuple 10.0 0.07, Tuple 13.0 1.0, Tuple 15.0 1.0, Tuple 15.4 0.07, Tuple 20.0 0.07, Tuple 26.0 1.0, Tuple 31.02 0.07, Tuple 33.0 0.07, Tuple 33.05 1.0, Tuple 33.38 1.0, Tuple 33.44 0.13, Tuple 36.0 0.07, Tuple 40.0 0.13, Tuple 48.1 0.13, Tuple 50.0 0.7, Tuple 54.3 0.7, Tuple 55.0 0.1, Tuple 57.0 0.0, Tuple 63.0 0.0, Tuple 66.0 0.1, Tuple 71.0 0.1, Tuple 71.2 0.0, Tuple 74.0 0.0, Tuple 74.2 0.6, Tuple 74.8 0.2, Tuple 90.0 0.0 ] time) (playBuf_ "improGlitchBuf" "impro-glitch" 1.0))
     )
 
 improWobble :: SigAU
