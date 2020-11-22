@@ -29,7 +29,7 @@ import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, panner_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker', waveShaper_)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, panner_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, speaker', waveShaper_)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -311,10 +311,10 @@ theGreatestThingYoullEverLearnIsJustToLove =
               { aggregators:
                   { out: Tuple (g'add_ "theGreatestThingYoullEverLearnIsJustToLoveOut") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "theGreatestThingYoullEverLearnIsJustToLoveCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "theGreatestThingYoullEverLearnIsJustToLoveGain" 0.65) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "theGreatestThingYoullEverLearnIsJustToLoveGain" 0.4) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
-                  { del: Tuple (g'delay_ "theGreatestThingYoullEverLearnIsJustToLoveDelay" 0.31) (SProxy :: SProxy "combine")
+                  { del: Tuple (g'delay_ "theGreatestThingYoullEverLearnIsJustToLoveDelay" 0.42) (SProxy :: SProxy "combine")
                   }
               , generators:
                   { mic: (pmic "theGreatestThingYoullEverLearnIsJustToLoveMic")
@@ -996,15 +996,15 @@ singleLowGSharpCello s time =
 tshwvfGong :: String -> Marker -> Marker -> Number -> SigAU
 tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (playBuf_ (buf <> "GongPlayer") buf 1.0))) time
 
-theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.5 :: SigAU
+theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.0 :: SigAU
 
-sayGong = tshwvfGong "kettle-a-3" Say2 Wan2 0.4 :: SigAU
+sayGong = tshwvfGong "kettle-a-3" Say2 Wan2 0.0 :: SigAU
 
-heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.4 :: SigAU
+heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.0 :: SigAU
 
-wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.3 :: SigAU
+wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.0 :: SigAU
 
-deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.2 :: SigAU
+deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.0 :: SigAU
 
 --
 nylonPlayer :: String -> Marker -> Marker -> Marker -> SigAU
@@ -1040,10 +1040,10 @@ deredPad = tshwvfPad "dered-pad" Dered2 Ry3 :: SigAU
 veRyPad = tshwvfPad "very-pad" Ve3 Far3 :: SigAU
 
 -- at offset length freq q
-data AOLFQ
-  = AOLFQ Number Number Number Number Number
+data AOLFQR
+  = AOLFQR Number Number Number Number Number Boolean
 
-theySayHeWanderedCymbalFragment :: Marker -> Marker -> Array AOLFQ -> SigAU
+theySayHeWanderedCymbalFragment :: Marker -> Marker -> Array AOLFQR -> SigAU
 theySayHeWanderedCymbalFragment st ed olfq =
   boundByCueWithOnset st ed
     ( \ac onset m t ->
@@ -1052,13 +1052,13 @@ theySayHeWanderedCymbalFragment st ed olfq =
         in
           fold
             ( map
-                ( \(AOLFQ a o l f q) ->
+                ( \(AOLFQR a o l f q r) ->
                     ( atT a
                         $ boundPlayer (l + 0.06)
                             ( \tm ->
                                 pure
                                   ( gainT_' (show a <> m2s st <> "theySayGain") (epwf [ Tuple 0.0 0.0, Tuple 1.0 l ] tm)
-                                      (highpass_ (show a <> m2s st <> "theySayHP") f q $ playBufWithOffset_ (show a <> m2s st <> "theySayBuf") "revcym" 1.0 o)
+                                      (highpass_ (show a <> m2s st <> "theySayHP") f q $ playBufWithOffset_ (show a <> m2s st <> "theySayBuf") (if r then "focym" else "revcym") 1.0 (if r then (6.8 - o - l) else o))
                                   )
                             )
                     )
@@ -1070,49 +1070,57 @@ theySayHeWanderedCymbalFragment st ed olfq =
 
 theySayHeWanderedBuildup =
   [ theySayHeWanderedCymbalFragment They2 Say2
-      [ AOLFQ 0.0 0.8 0.8 1000.0 3.0
-      , AOLFQ 0.6 1.4 1.2 500.0 2.0
-      , AOLFQ 0.9 1.5 1.6 1500.0 6.0
-      , AOLFQ 1.3 1.0 0.8 700.0 4.0
+      [ AOLFQR 0.0 0.8 0.8 1000.0 3.0 false
+      , AOLFQR 0.6 1.4 1.2 500.0 2.0 false
+      , AOLFQR 0.9 1.5 1.6 1500.0 6.0 false
+      , AOLFQR 1.3 1.0 0.8 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Say2 He2
-      [ AOLFQ 0.0 1.2 0.8 1000.0 3.0
-      , AOLFQ 0.5 1.4 1.2 500.0 2.0
-      , AOLFQ 0.9 2.0 0.9 1500.0 6.0
-      , AOLFQ 1.4 1.7 1.0 700.0 4.0
+      [ AOLFQR 0.0 1.2 0.8 1000.0 3.0 false
+      , AOLFQR 0.5 1.4 1.2 500.0 2.0 false
+      , AOLFQR 0.9 2.0 0.9 1500.0 6.0 false
+      , AOLFQR 1.4 1.7 1.0 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment He2 Wan2
-      [ AOLFQ 0.0 1.6 1.2 1000.0 3.0
-      , AOLFQ 0.4 2.3 1.1 500.0 2.0
-      , AOLFQ 0.8 2.6 1.3 1500.0 6.0
-      , AOLFQ 1.2 2.5 0.9 700.0 4.0
+      [ AOLFQR 0.0 1.6 1.2 1000.0 3.0 false
+      , AOLFQR 0.4 2.3 1.1 500.0 2.0 false
+      , AOLFQR 0.8 2.6 1.3 1500.0 6.0 false
+      , AOLFQR 1.2 2.5 0.9 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Wan2 Dered2
-      [ AOLFQ 0.0 2.3 1.3 1000.0 3.0
-      , AOLFQ 0.35 3.3 0.9 500.0 2.0
-      , AOLFQ 0.7 4.2 1.6 1500.0 6.0
-      , AOLFQ 1.05 3.1 1.3 2800.0 8.0
-      , AOLFQ 1.2 4.5 1.4 700.0 4.0
+      [ AOLFQR 0.0 2.3 1.3 1000.0 3.0 false
+      , AOLFQR 0.35 3.3 0.9 500.0 2.0 false
+      , AOLFQR 0.7 4.2 1.6 1500.0 6.0 false
+      , AOLFQR 1.05 3.1 1.3 2800.0 8.0 false
+      , AOLFQR 1.2 4.5 1.4 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Dered2 Ve2
-      [ AOLFQ 0.0 4.8 1.8 1600.0 7.0
-      , AOLFQ 0.3 5.1 1.5 500.0 2.0
-      , AOLFQ 0.6 5.9 1.15 3000.0 6.0
-      , AOLFQ 0.9 5.5 1.5 300.0 2.0
-      , AOLFQ 1.2 5.8 0.9 2000.0 4.0
+      [ AOLFQR 0.0 4.8 1.8 1600.0 7.0 false
+      , AOLFQR 0.3 5.1 1.5 500.0 2.0 false
+      , AOLFQR 0.6 5.9 1.15 3000.0 6.0 false
+      , AOLFQR 0.9 5.5 1.5 300.0 2.0 false
+      , AOLFQR 1.2 5.8 0.9 2000.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Ve2 Ry2
-      [ AOLFQ 0.0 4.8 1.8 1600.0 7.0
-      , AOLFQ 0.3 4.7 1.5 500.0 2.0
-      , AOLFQ 0.6 4.2 0.9 3000.0 6.0
-      , AOLFQ 0.9 4.8 1.2 300.0 2.0
-      , AOLFQ 1.2 3.9 0.4 1500.0 4.0
+      [ AOLFQR 0.0 5.1 1.3 1600.0 7.0 true
+      , AOLFQR 0.3 5.0 1.5 500.0 2.0 true
+      , AOLFQR 0.6 4.6 0.9 3000.0 6.0 true
+      , AOLFQR 0.9 4.8 1.2 300.0 2.0 true
+      , AOLFQR 1.2 4.3 0.4 1500.0 4.0 true
       ]
   , theySayHeWanderedCymbalFragment Ry2 Far2
-      [ AOLFQ 0.0 2.3 0.8 1000.0 3.0
-      , AOLFQ 0.6 3.3 1.3 500.0 2.0
-      , AOLFQ 0.9 4.2 1.6 1500.0 6.0
-      , AOLFQ 1.2 3.1 0.3 700.0 4.0
+      [ AOLFQR 0.0 3.8 0.8 1000.0 3.0 true
+      , AOLFQR 0.6 3.5 0.5 500.0 2.0 true
+      , AOLFQR 0.9 3.3 0.3 1500.0 6.0 true
+      , AOLFQR 1.2 3.1 1.2 700.0 4.0 true
+      ]
+  , theySayHeWanderedCymbalFragment Far2 Far2
+      [ AOLFQR 0.0 2.3 0.4 1000.0 3.0 true
+      , AOLFQR 0.6 2.1 0.5 500.0 2.0 true
+      , AOLFQR 0.9 1.8 0.4 1500.0 6.0 true
+      , AOLFQR 1.2 1.6 0.5 700.0 4.0 true
+      , AOLFQR 1.6 1.6 0.5 700.0 4.0 true
+      , AOLFQR 2.0 1.1 0.5 700.0 4.0 true
       ]
   ] ::
     Array SigAU
@@ -1171,10 +1179,10 @@ veRyStrangeEn =
           { aggregators:
               { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
               , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.6 (0.6 + 0.5 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
+              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.55 (0.09 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
               }
           , processors:
-              { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.2) (SProxy :: SProxy "combine")
+              { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.35) (SProxy :: SProxy "combine")
               }
           , generators:
               { mic: boundByCueNac''' Ve1 En1 (pmic "VeRyStrangeEnMic") m
@@ -1192,10 +1200,10 @@ chanTed =
               { aggregators:
                   { out: Tuple (g'add_ "Chan1Out") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "Chan1Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "Chan1Gain" 0.6) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "Chan1Gain" 0.55) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
-                  { del: Tuple (g'delay_ "Chan1Delay" 0.25) (SProxy :: SProxy "combine")
+                  { del: Tuple (g'delay_ "Chan1Delay" 0.31) (SProxy :: SProxy "combine")
                   }
               , generators:
                   { mic: boundByCueNac''' Chan1 Ted1 (pmic "Chan1Mic") m
@@ -1854,37 +1862,48 @@ improFiligree =
 
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
-compVeryStrangeEnchantedBoy Ve1 = t1c440 0.2 <$> 54.0 : 58.0 : 61.0 : Nil
+compVeryStrangeEnchantedBoy Ve1 = t1c440 0.8 <$> 54.0 : 58.0 : 61.0 : Nil
 
-compVeryStrangeEnchantedBoy Ry1 = t1c440 0.4 <$> 56.0 : 58.0 : 60.0 : Nil
+compVeryStrangeEnchantedBoy Ry1 = t1c440 0.9 <$> 56.0 : 58.0 : 60.0 : Nil
 
-compVeryStrangeEnchantedBoy Strange1 = t1c440 0.5 <$> 58.0 : 61.0 : 63.0 : Nil
+compVeryStrangeEnchantedBoy Strange1 = t1c440 1.0 <$> 58.0 : 61.0 : 63.0 : Nil
 
-compVeryStrangeEnchantedBoy En1 = t1c440 0.7 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
+compVeryStrangeEnchantedBoy En1 = t1c440 1.0 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
 
 compVeryStrangeEnchantedBoy Chan1 = t1c440 1.0 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
 
-compVeryStrangeEnchantedBoy Ted1 = t1c440 0.6 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
+compVeryStrangeEnchantedBoy Ted1 = t1c440 0.8 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
 
 -- compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
 compVeryStrangeEnchantedBoy _ = Nil
 
-simpleOsc :: (String -> Number -> AudioUnit D1) -> String -> List (Tuple Number Number) -> AudioUnit D2
-simpleOsc f s Nil = zero
+toTerracedSimpleOscGain :: Number -> Number -> Number
+toTerracedSimpleOscGain v t = go
+  where
+  rate = 0.32 - (v * 0.11)
 
-simpleOsc f s (h : t) =
+  tmod = t % (4.0 * rate)
+
+  go
+    | tmod < rate = v
+    | tmod < 2.0 * rate = v * 0.85
+    | tmod < 3.0 * rate = v * 0.65
+    | tmod < 4.0 * rate = v * 0.4
+    | otherwise = v
+
+simpleOsc :: (String -> Number -> AudioUnit D1) -> String -> Number -> List (Tuple Number Number) -> AudioUnit D2
+simpleOsc f s time Nil = zero
+
+simpleOsc f s time (h : t) =
   pannerMono_ (s <> "_pmono") 0.0
     ( gain_ (s <> "_gain") 1.0
         ( gain_'
             (s <> "_firstgn")
-            (fst h)
+            (toTerracedSimpleOscGain (fst h) time)
             (f (s <> "_firstosc") (snd h))
-            :| L.mapWithIndex (\i n -> gain_' (s <> "osc" <> show i) (fst n) $ f (s <> "osc" <> show i) (snd n)) t
+            :| L.mapWithIndex (\i n -> gain_' (s <> "osc" <> show i) (toTerracedSimpleOscGain (fst n) time) $ f (s <> "osc" <> show i) (snd n)) t
         )
     )
-
-sSinOsc :: String -> List (Tuple Number Number) -> AudioUnit D2
-sSinOsc = simpleOsc sinOsc_
 
 epwf :: Array (Tuple Number Number) -> Number -> AudioParameter
 epwf = evalPiecewise kr
@@ -2646,16 +2665,19 @@ makeCanvas (CanvasInfo ci) time pads backAction forwardAction acc =
       )
 
 veryStrangeEnchantedBoyComp :: SigAU
-veryStrangeEnchantedBoyComp ac cm _ =
-  Tuple ac
-    ( pure
-        $ ( simpleOsc (\s n -> periodicOsc_ ("oscVeryStrangeEnchantedBoyComp" <> s) "smooth" n) (m2s cm) (compVeryStrangeEnchantedBoy cm)
-              * audioWorkletProcessor_ "gateVeryStrangeEnchantedBoyComp"
-                  "klank-amplitude"
-                  O.empty
-                  (pmic "gatingSignalVeryStrangeEnchantedBoyComp")
-          )
-    )
+veryStrangeEnchantedBoyComp =
+  boundByCueWithOnset A1 They2 \ac onset cm t ->
+    let
+      time = t - onset
+    in
+      ( pure
+          $ ( simpleOsc (\s n -> periodicOsc_ ("oscVeryStrangeEnchantedBoyComp" <> s) "smooth" n) (m2s cm) time (compVeryStrangeEnchantedBoy cm)
+                * audioWorkletProcessor_ "gateVeryStrangeEnchantedBoyComp"
+                    "klank-amplitude"
+                    O.empty
+                    (pmic "gatingSignalVeryStrangeEnchantedBoyComp")
+            )
+      )
 
 type Filt
   = Number -> AudioUnit D2 -> AudioUnit D2
@@ -3103,7 +3125,7 @@ shredderImpro buf len stgn st ed =
   where
   tg = m2s st <> m2s ed
 
-shredderManyThings = shredderImpro "nice-high-shred" 20.0 0.75 Ny9 Me11 :: SigAU
+shredderManyThings = shredderImpro "nice-high-shred" 6.0 0.3 Ny9 Me11 :: SigAU
 
 data SecondHalfHarmony
   = AndBase0
@@ -3625,7 +3647,8 @@ main =
         -- siren
         , Tuple "siren" "https://freesound.org/data/previews/534/534550_11837619-hq.mp3"
         -- revcym
-        , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
+        , Tuple "revcym" "https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
+        , Tuple "focym" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/forwardCymbal.mp3"
         -- drumz
         , Tuple "kick" "https://freesound.org/data/previews/189/189174_3296371-hq.mp3"
         , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.mp3"
