@@ -647,6 +647,28 @@ veryWiseWasSkiddaw =
           pure (gain_' "skiddawVeryWiseGain" (1.0) (playBuf_ "skiddawVeryWiseBuf" "skiddaw-low-d" 1.0))
     )
 
+outroFlagBang :: SigAU
+outroFlagBang =
+  boundByCueWithOnset Me11 Turn13
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "outroFlagBangingGain" (min (time * 0.2) 0.2) (playBuf_ "outroFlagBangingBuf" "flag-banging" 1.0))
+    )
+
+outroShaker :: SigAU
+outroShaker =
+  boundByCueWithOnset Me11 Turn13
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' "outroShakerGain" (if m /= Turn13 then (min (time * 0.2) baseVol) else (maybe baseVol (\o -> (max 0.0 (baseVol - (0.05 * (t - o))))) (M.lookup m ac.markerOnsets))) (bandpass_ ("outroShakerBPF") (conv440 (60.0 + sin (time * pi * (0.4 + (0.3 * sin (time * pi * 0.2)))))) (4.0 + 3.0 * sin (time * pi * 0.3)) (loopBuf_ "outroShakerBuf" "shaker" 0.91 0.0 0.0)))
+    )
+  where
+  baseVol = 0.45
+
 wiseWasHeAndClock :: SigAU
 wiseWasHeAndClock =
   boundByCueWithOnset Wise6 And7
@@ -925,6 +947,25 @@ heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.4 :: SigAU
 wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.3 :: SigAU
 
 deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.2 :: SigAU
+
+--
+nylonPlayer :: String -> Marker -> Marker -> Marker -> SigAU
+nylonPlayer buf st ed dim = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in pure (gain_' ("gainNylon" <> buf) (if m >= dim then (max 0.0 (baseVol - (maybe 0.0 (\o -> 0.2 * (t - o)) (M.lookup dim ac.markerOnsets)))) else baseVol) (loopBuf_ ("loopBufNylon" <> buf) buf 1.0 0.0 0.0))
+  where
+  baseVol = 0.75
+
+theGreatestNylon = nylonPlayer "theGreatestNylon" The12 Learn12 You'll12 :: SigAU
+
+youllEverNylon = nylonPlayer "youllEverNylon" Ver12 And13 Love13 :: SigAU
+
+isJustToNylon = nylonPlayer "isJustToNylon" Love13 Loved13 Be13 :: SigAU
+
+andBeNylon = nylonPlayer "nylonPlayer" Be13 Turn13 Re13 :: SigAU
+
+nylonTurn :: SigAU
+nylonTurn = boundByCueWithOnset Turn13 Turn13 \ac onset m t -> let time = t - onset in pure (gain_' ("gainNylonEnd") (0.5 - (time * 0.08)) (loopBuf_ ("loopBufNylonEnd") "turnNylon" 1.0 0.0 0.0))
+
+nylonEnd = [ theGreatestNylon, youllEverNylon, isJustToNylon, andBeNylon, nylonTurn ] :: Array SigAU
 
 --
 tshwvfPad :: String -> Marker -> Marker -> SigAU
@@ -3353,6 +3394,8 @@ natureBoy =
   , kingsVoice
   , thisHeSaidTo
   , meBeforeGreatest
+  , outroFlagBang
+  , outroShaker
   , theGreatestThingDrumOutro
   , theGreatestThingYoullEverLearnIsJustToLove
   , and13Voice
@@ -3362,7 +3405,8 @@ natureBoy =
     <> secondPartBP
     <> secondPartVocalsUsingRig
     <> manyThingsFoolsAndKingsThisHeSaidToMeDrumz
-    <> secondHalfHarmony ::
+    <> secondHalfHarmony
+    <> nylonEnd ::
     Array SigAU
 
 scene :: Interactions -> NatureBoyAccumulator -> CanvasInfo -> Number -> Behavior (AV D2 NatureBoyAccumulator)
@@ -3543,18 +3587,18 @@ main =
         --, Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-hq.mp3"
         -- yesHe
         , Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
-        --, Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
+        , Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
         -- Ambiance
         --, Tuple "costal-ambiance" "https://freesound.org/data/previews/207/207553_285997-hq.mp3"
         --, Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-hq.mp3"
         --, Tuple "robin" "https://freesound.org/data/previews/416/416529_5121236-hq.mp3"
         ------------- shredders
         -- second half good... nice and gear-y
-        --, Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-hq.mp3"
-        --, Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-hq.mp3"
-        --, Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-hq.mp3"
-        --, Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-hq.mp3"
-        --, Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-hq.mp3"
+        , Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-hq.mp3"
+        , Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-hq.mp3"
+        , Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-hq.mp3"
+        , Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-hq.mp3"
+        , Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-hq.mp3"
         -------------------- egg timer
         --, Tuple "egg-timer-wind-plus-ring" "https://freesound.org/data/previews/14/14263_31076-hq.mp3"
         , Tuple "egg-timer-ticking" "https://freesound.org/data/previews/468/468081_2247456-hq.mp3"
@@ -3697,6 +3741,7 @@ main =
         , Tuple "youllEverLearn" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverLearn.ogg"
         , Tuple "youllEverNylon" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverNylon.ogg"
         , Tuple "youllEverShamisen" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/youllEverShamisen.ogg"
+        , Tuple "shaker" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/eggshaker.mp3"
         ]
     , periodicWaves =
       \ctx _ res rej -> do
