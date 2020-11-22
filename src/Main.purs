@@ -583,15 +583,21 @@ butVeryWiseWasAccomp = alsAccomp "but-very-wise-was" But6 Was6 :: SigAU
 
 heAccomp = alsAccomp "he" He6 He6 :: SigAU
 
-heRichSwell :: SigAU
-heRichSwell =
-  boundByCueWithOnset Wise6 He6
+richSwell :: String -> Marker -> Marker -> Number -> (Number -> Number) -> Number -> (Number -> Number) -> SigAU
+richSwell tag st ed p0p p0f p1p p1f =
+  boundByCueWithOnset st ed
     ( \ac onset m t ->
         let
           time = t - onset
         in
-          pure (pannerMono_ "heRichSwellPan" 0.0 (gain_ "heRichSwellFade" 1.0 ((gain_' "heRichSwellGain0" (min 0.3 $ time * 0.02) (periodicOsc_ "heRichSwellOsc0" "rich" (conv440 32.0))) :| (gain_' "heRichSwellGain1" (min 0.2 $ time * 0.02) (periodicOsc_ "heRichSwellOsc1" "rich" (conv440 44.0))) : Nil)))
+          pure (pannerMono_ (tag <> "RichSwellPan") 0.0 (gain_ (tag <> "RichSwellFade") 1.0 ((gain_' (tag <> "RichSwellGain0") (p0f time) (periodicOsc_ (tag <> "RichSwellOsc0") "rich" p0p)) :| (gain_' (tag <> "RichSwellGain1") (p1f time) (periodicOsc_ (tag <> "RichSwellOsc1") "rich" p1p)) : Nil)))
     )
+
+shyRichSwell = richSwell "shy" Shy5 Shy5 (conv440 32.0) (\time -> max 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.3)) (conv440 44.0) (\time -> max 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.3))
+
+eyeRichSwell = richSwell "eye" Eye5 Eye5 (conv440 37.0) (\time -> max 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.3)) (conv440 49.0) (\time -> max 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.3))
+
+heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02)
 
 thenOneDayWah0 :: SigAU
 thenOneDayWah0 =
@@ -729,7 +735,7 @@ outroShaker =
 
 wiseWasHeAndClock :: SigAU
 wiseWasHeAndClock =
-  boundByCueWithOnset Wise6 And7
+  boundByCueWithOnset Wise6 He6
     ( \ac onset m t ->
         let
           time = t - onset
@@ -994,17 +1000,38 @@ singleLowGSharpCello s time =
   )
 
 tshwvfGong :: String -> Marker -> Marker -> Number -> SigAU
-tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (playBuf_ (buf <> "GongPlayer") buf 1.0))) time
+tshwvfGong buf st ed del =
+  boundByCue st ed
+    ( \m t ->
+        pure
+          $ graph_ (buf <> "GongGraph")
+              { aggregators:
+                  { out: Tuple (g'add_ (buf <> "GongOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ (buf <> "GongCombine")) (SLProxy :: SLProxy ("gain" :/ "gong" :/ SNil))
+                  , gain: Tuple (g'gain_ (buf <> "GongGain") 0.7) (SLProxy :: SLProxy ("del" :/ SNil))
+                  }
+              , processors:
+                  { del: Tuple (g'delay_ (buf <> "GongDelay") del) (SProxy :: SProxy "combine")
+                  }
+              , generators:
+                  { gong: (playBuf_ (buf <> "GongPlayer") buf 1.0)
+                  }
+              }
+    )
 
-theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.3 :: SigAU
+theyGong0 = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.3 :: SigAU
 
-sayGong = tshwvfGong "kettle-a-3" Say2 Wan2 0.3 :: SigAU
+sayGong0 = tshwvfGong "kettle-a-3" Say2 Wan2 0.26 :: SigAU
 
-heGong = tshwvfGong "kettle-c-4" He2 Dered2 0.3 :: SigAU
+heGong0 = tshwvfGong "kettle-c-4" He2 Dered2 0.23 :: SigAU
 
-wanGong = tshwvfGong "kettle-e-flat-4" Wan2 Ve3 0.3 :: SigAU
+wanGong0 = tshwvfGong "kettle-e-flat-4" Wan2 Ve2 0.2 :: SigAU
 
-deredGong = tshwvfGong "kettle-f-sharp-4" Dered2 Ry3 0.3 :: SigAU
+deredGong0 = tshwvfGong "kettle-f-sharp-4" Dered2 Ry2 0.18 :: SigAU
+
+veGong0 = tshwvfGong "kettle-g-sharp-3" Ve2 Far2 0.22 :: SigAU
+
+tshwGongs = [ theyGong0, sayGong0, heGong0, wanGong0, deredGong0 ] :: Array SigAU
 
 --
 nylonPlayer :: String -> Marker -> Marker -> Marker -> SigAU
@@ -1214,23 +1241,26 @@ chanTed =
 veRyStrangeEnChanTedBoyHH :: String -> Number -> Number -> Number -> Marker -> Marker -> SigAU
 veRyStrangeEnChanTedBoyHH tag gn hpf rate st ed =
   boundByCueWithOnset st ed
-    ( \ac onset m t -> let time = t - onset in
-        pure (gain_' (tag <> "veryStrangeGain") (max 0.0 $ gn - (0.06 * time)) (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
+    ( \ac onset m t ->
+        let
+          time = t - onset
+        in
+          pure (gain_' (tag <> "veryStrangeGain") gn (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ playBuf_ (tag <> "VeryStrangeLoopBUf") "gear" rate))
     )
 
-veHH = veRyStrangeEnChanTedBoyHH "ve" 0.06 2000.0 0.8 Ve1 Ve1 :: SigAU
+veHH = veRyStrangeEnChanTedBoyHH "ve" 0.1 2000.0 0.9 Ve1 Strange1 :: SigAU
 
-ryHH = veRyStrangeEnChanTedBoyHH "ry" 0.1 2000.0 0.84 Ry1 Ry1 :: SigAU
+ryHH = veRyStrangeEnChanTedBoyHH "ry" 0.3 2000.0 0.92 Ry1 En1 :: SigAU
 
-strangeHH = veRyStrangeEnChanTedBoyHH "ry" 0.25 1000.0 0.88 Strange1 Strange1 :: SigAU
+strangeHH = veRyStrangeEnChanTedBoyHH "strange" 0.6 1000.0 0.94 Strange1 Chan1 :: SigAU
 
-enHH = veRyStrangeEnChanTedBoyHH "ry" 0.4 800.0 0.95 En1 En1 :: SigAU
+enHH = veRyStrangeEnChanTedBoyHH "en" 0.7 800.0 0.97 En1 Ted1 :: SigAU
 
-chanHH = veRyStrangeEnChanTedBoyHH "ry" 0.5 400.0 1.0 Chan1 Chan1 :: SigAU
+chanHH = veRyStrangeEnChanTedBoyHH "chan" 0.8 400.0 1.0 Chan1 Boy1 :: SigAU
 
-tedHH = veRyStrangeEnChanTedBoyHH "ry" 0.2 1500.0 0.85 Ted1 Ted1 :: SigAU
+tedHH = veRyStrangeEnChanTedBoyHH "ted" 0.6 1500.0 0.97 Ted1 They2 :: SigAU
 
-boyHH = veRyStrangeEnChanTedBoyHH "ry" 0.05 3000.0 0.8 Boy1 Boy1 :: SigAU
+boyHH = veRyStrangeEnChanTedBoyHH "boy" 0.4 3000.0 0.94 Boy1 Say2 :: SigAU
 
 veRyStrangeEnChanTedBoyHHs =
   [ veHH
@@ -1240,7 +1270,8 @@ veRyStrangeEnChanTedBoyHHs =
   , chanHH
   , tedHH
   , boyHH
-  ] :: Array SigAU
+  ] ::
+    Array SigAU
 
 data Harm0
   = Harm0'A
@@ -3471,14 +3502,9 @@ natureBoy =
   , boy1
   , they2
   , sayHeWandered
-  , theyGong
-  , sayGong
   , sayPad
-  , heGong
   , hePad
-  , wanGong
   , wanPad
-  , deredGong
   , deredPad
   , veRyPad
   , veRy2
@@ -3518,6 +3544,8 @@ natureBoy =
   , veryWiseWasSkiddaw
   , wasHeGlitches
   , planeLanding
+  , shyRichSwell
+  , eyeRichSwell
   , heRichSwell
   , scratchySwellHe
   , wiseWasHeAndClock
@@ -3551,6 +3579,7 @@ natureBoy =
   , and13Voice
   , beLovedInReturn
   ]
+    <> tshwGongs
     <> veRyStrangeEnChanTedBoyHHs
     <> theySayHeWanderedBuildup
     <> secondPartBP
@@ -3667,8 +3696,9 @@ main =
         , Tuple "flute" "https://media.graphcms.com/eiKfSNIbSaiomCZQzXGA"
         -- siren
         , Tuple "siren" "https://freesound.org/data/previews/534/534550_11837619-hq.mp3"
+        -- gear
+        , Tuple "gear" "https://freesound.org/data/previews/467/467422_2056667-hq.mp3"
         -- cym
-        , Tuple "hihat" "https://freesound.org/data/previews/128/128379_2010064-hq.mp3"
         , Tuple "revcym" "https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
         , Tuple "focym" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/forwardCymbal.mp3"
         -- drumz
