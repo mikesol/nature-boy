@@ -3645,86 +3645,20 @@ main =
         , Tuple "and-sad-of-eye" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/andSadOfEye.ogg"
         , Tuple "but-very-wise-was" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/butVeryWiseWas.ogg"
         , Tuple "he" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/he.ogg"
-        -- bass
         , Tuple "nasty-bass" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/nastyBass.ogg"
-        -- snare
         , Tuple "snare-hit" "https://freesound.org/data/previews/100/100393_377011-hq.mp3"
-        -- foghorns
-        -- low, grave
-        -- , Tuple "distant-low-blast" "https://freesound.org/data/previews/500/500146_401348-hq.mp3"
-        -- nasty, clippy, beautiful
-        -- , Tuple "nasty-rich-low" "https://freesound.org/data/previews/234/234681_1708550-hq.mp3"
-        -- bold, straight
-        -- , Tuple "bold-straight-pvc" "https://freesound.org/data/previews/507/507472_2977885-hq.mp3"
-        -- single low-ish blast
-        -- , Tuple "single-clear-blast" "https://freesound.org/data/previews/81/81874_1285056-hq.mp3"
-        -- higher
-        -- , Tuple "higher-fog-horn" "https://freesound.org/data/previews/92/92911_37876-hq.mp3"
-        --------------------------------
-        -- harmonic rising, glitchy
-        -- , Tuple "rising-harm" "https://freesound.org/data/previews/430/430865_45576-hq.mp3"
-        -- , Tuple "sitar" "https://freesound.org/data/previews/37/37715_347704-hq.mp3"
-        ----------- pads
-        -- , Tuple "twisty-pad" "https://freesound.org/data/previews/33/33183_250881-hq.mp3"
-        --, Tuple "evolving" "https://freesound.org/data/previews/484/484850_16058-hq.mp3"
-        -- yesHe
         , Tuple "warble" "https://freesound.org/data/previews/110/110212_1751865-hq.mp3"
-        -- yesHe
         , Tuple "to-the-heavens" "https://freesound.org/data/previews/110/110211_1751865-hq.mp3"
-        --, Tuple "low-energized" "https://freesound.org/data/previews/33/33182_250881-hq.mp3"
-        --, Tuple "ethereal" "https://freesound.org/data/previews/352/352944_6523136-hq.mp3"
-        ------------------------- THIS IS OUR BASS SOUND
-        ------------------------- FOR THE SECOND PART
         , Tuple "bassplz" "https://freesound.org/data/previews/119/119059_181941-hq.mp3"
         , Tuple "scratchy-swell" "https://freesound.org/data/previews/417/417416_1453392-hq.mp3"
-        --, Tuple "low-deep" "https://freesound.org/data/previews/350/350660_1676145-hq.mp3"
-        --, Tuple "knock-pad" "https://freesound.org/data/previews/7/7402_1629-hq.mp3"
-        --, Tuple "gnarly-feedback" "https://freesound.org/data/previews/213/213906_862453-hq.mp3"
-        --, Tuple "low-drone" "https://freesound.org/data/previews/353/353549_6493436-hq.mp3"
-        -- yesHe
         , Tuple "shaky-scratchy" "https://freesound.org/data/previews/277/277172_93137-hq.mp3"
         , Tuple "flag-banging" "https://freesound.org/data/previews/169/169798_1661766-hq.mp3"
-        -- Ambiance
-        --, Tuple "costal-ambiance" "https://freesound.org/data/previews/207/207553_285997-hq.mp3"
-        --, Tuple "beautiful-birds" "https://freesound.org/data/previews/528/528661_1576553-hq.mp3"
-        --, Tuple "robin" "https://freesound.org/data/previews/416/416529_5121236-hq.mp3"
-        ------------- shredders
-        -- second half good... nice and gear-y
-        --, Tuple "indoor-shredder" "https://freesound.org/data/previews/82/82435_1276308-hq.mp3"
-        --, Tuple "high-shrill-terrifying-shredder" "https://freesound.org/data/previews/181/181143_3374466-hq.mp3"
-        --, Tuple "mechanical-clicking-shredder" "https://freesound.org/data/previews/78/78521_1218676-hq.mp3"
-        --, Tuple "single-shred" "https://freesound.org/data/previews/26/26389_186469-hq.mp3"
         , Tuple "nice-high-shred" "https://freesound.org/data/previews/21/21755_29541-hq.mp3"
-        -------------------- egg timer
-        --, Tuple "egg-timer-wind-plus-ring" "https://freesound.org/data/previews/14/14263_31076-hq.mp3"
         , Tuple "egg-timer-ticking" "https://freesound.org/data/previews/468/468081_2247456-hq.mp3"
-        ------------------ gamelan
-        --, Tuple "gamelan-bali" "https://freesound.org/data/previews/257/257625_3932570-hq.mp3"
         , Tuple "low-c#-cello-drone" "https://freesound.org/data/previews/195/195278_3623377-hq.mp3"
-        --, Tuple "handbell-c#" "https://freesound.org/data/previews/339/339808_5121236-hq.mp3"
-        --, Tuple "guitar-8th-c#" "https://freesound.org/data/previews/372/372386_5968459-hq.mp3"
-        --, Tuple "accordion-c#-aug" "https://freesound.org/data/previews/120/120692_649468-hq.mp3"
-        --, Tuple "spoooooky-amb" "https://freesound.org/data/previews/277/277572_5338846-hq.mp3"
-        -- rate 1.09 gets to C#
-        --, Tuple "scary-c" "https://freesound.org/data/previews/277/277637_5338846-hq.mp3"
-        -- , Tuple "gong-g-sharp" "https://media.graphcms.com/LFgrdeImQICudFzE1ShR"
         , Tuple "gong-g-sharp-reversed" "https://media.graphcms.com/pYrQiqMAT62OoVYQugg4"
-        --, Tuple "power-chord-c-sharp" "https://freesound.org/data/previews/49/49275_177850-hq.mp3"
-        --, Tuple "bassoon-c-sharp" "https://freesound.org/data/previews/154/154330_2626346-hq.mp3"
-        --, Tuple "loud-awful-scream" "https://freesound.org/data/previews/267/267395_5004228-hq.mp3"
-        --, Tuple "real-human-scream" "https://freesound.org/data/previews/536/536486_11937282-hq.mp3"
-        --, Tuple "flute-c-sharp" "https://freesound.org/data/previews/154/154208_2626346-hq.mp3"
-        --, Tuple "pipe-c-sharp" "https://freesound.org/data/previews/345/345192_5622625-hq.mp3"
-        -- , Tuple "guitar-c-sharp" "https://freesound.org/data/previews/153/153957_2626346-hq.mp3"
         , Tuple "bass-c-sharp" "https://media.graphcms.com/0gp37YI7Q5mczsjAUiUH"
-        --, Tuple "pizz-c-sharp" "https://freesound.org/data/previews/153/153642_2626346-hq.mp3"
-        --, Tuple "pizz-e" "https://freesound.org/data/previews/153/153633_2626346-hq.mp3"
-        --, Tuple "pizz-g-sharp" "https://freesound.org/data/previews/153/153637_2626346-hq.mp3"
-        --, Tuple "bass-pizz-c-sharp" "https://freesound.org/data/previews/153/153805_2626346-hq.mp3"
-        --, Tuple "guitar-high-c-sharp" "https://freesound.org/data/previews/153/153944_2626346-hq.mp3"
-        --, Tuple "voice-like-c-sharp" "https://freesound.org/data/previews/315/315850_4557960-hq.mp3"
         , Tuple "terrifying-air-raid-siren" "https://freesound.org/data/previews/271/271132_5004228-hq.mp3"
-        --, Tuple "shruti-box" "https://media.graphcms.com/qwlr3QDKQHmrLjD9smOY"
         , Tuple "chimez-above-c-sharp-drone" "https://media.graphcms.com/3Z0DXRxRtOTymo51DGev"
         , Tuple "middle-g-sharp-guitar" "https://freesound.org/data/previews/154/154013_2626346-hq.mp3"
         , Tuple "high-g-sharp-guitar" "https://freesound.org/data/previews/153/153984_2626346-hq.mp3"
