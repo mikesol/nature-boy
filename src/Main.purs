@@ -542,7 +542,7 @@ butPedalVoice =
               { aggregators:
                   { out: Tuple (g'add_ "butPedalVoiceOut") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "butPedalVoiceCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "butPedalVoiceGain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "butPedalVoiceGain" 0.76) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
                   { del: Tuple (g'delay_ "butPedalVoiceDelay" 0.1) (SProxy :: SProxy "combine")
@@ -994,7 +994,7 @@ singleLowGSharpCello s time =
   )
 
 tshwvfGong :: String -> Marker -> Marker -> Number -> SigAU
-tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (highpass_ (buf <> "GongHPF") 1300.0 4.0 (playBuf_ (buf <> "GongPlayer") buf 1.0))) time)
+tshwvfGong buf st ed loc = boundByCueWithOnset st ed \ac onset m t -> let time = t - onset in (atT loc $ overZeroPlayer (const $ pure (playBuf_ (buf <> "GongPlayer") buf 1.0))) time
 
 theyGong = tshwvfGong "kettle-g-sharp-3" They2 Wan2 0.3 :: SigAU
 
@@ -1179,7 +1179,7 @@ veRyStrangeEn =
           { aggregators:
               { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
               , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.55 (0.09 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
+              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.7 (0.18 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
               }
           , processors:
               { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.35) (SProxy :: SProxy "combine")
@@ -1200,7 +1200,7 @@ chanTed =
               { aggregators:
                   { out: Tuple (g'add_ "Chan1Out") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "Chan1Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "Chan1Gain" 0.55) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "Chan1Gain" 0.7) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
                   { del: Tuple (g'delay_ "Chan1Delay" 0.31) (SProxy :: SProxy "combine")
@@ -1210,6 +1210,37 @@ chanTed =
                   }
               }
     )
+
+veRyStrangeEnChanTedBoyHH :: String -> Number -> Number -> Number -> Marker -> Marker -> SigAU
+veRyStrangeEnChanTedBoyHH tag gn hpf rate st ed =
+  boundByCueWithOnset st ed
+    ( \ac onset m t ->
+        pure (gain_' (tag <> "veryStrangeGain") gn (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ loopBuf_ (tag <> "VeryStrangeLoopBUf") "hihat" rate 0.0 0.0))
+    )
+
+veHH = veRyStrangeEnChanTedBoyHH "ve" 0.3 2000.0 0.8 Ve1 Ve1 :: SigAU
+
+ryHH = veRyStrangeEnChanTedBoyHH "ry" 0.3 2000.0 0.84 Ry1 Ry1 :: SigAU
+
+strangeHH = veRyStrangeEnChanTedBoyHH "ry" 0.4 1000.0 0.88 Strange1 Strange1 :: SigAU
+
+enHH = veRyStrangeEnChanTedBoyHH "ry" 0.5 800.0 0.95 En1 En1 :: SigAU
+
+chanHH = veRyStrangeEnChanTedBoyHH "ry" 0.7 400.0 1.0 Chan1 Chan1 :: SigAU
+
+tedHH = veRyStrangeEnChanTedBoyHH "ry" 0.3 1500.0 0.85 Ted1 Ted1 :: SigAU
+
+boyHH = veRyStrangeEnChanTedBoyHH "ry" 0.1 3000.0 0.8 Boy1 Boy1 :: SigAU
+
+veRyStrangeEnChanTedBoyHHs =
+  [ veHH
+  , ryHH
+  , strangeHH
+  , enHH
+  , chanHH
+  , tedHH
+  , boyHH
+  ] :: Array SigAU
 
 data Harm0
   = Harm0'A
@@ -1878,18 +1909,7 @@ compVeryStrangeEnchantedBoy Ted1 = t1c440 0.8 <$> 60.0 : 62.0 : 66.0 : 69.0 : Ni
 compVeryStrangeEnchantedBoy _ = Nil
 
 toTerracedSimpleOscGain :: Number -> Number -> Number
-toTerracedSimpleOscGain v t = go
-  where
-  rate = 0.32 - (v * 0.11)
-
-  tmod = t % (4.0 * rate)
-
-  go
-    | tmod < rate = v
-    | tmod < 2.0 * rate = v * 0.85
-    | tmod < 3.0 * rate = v * 0.65
-    | tmod < 4.0 * rate = v * 0.4
-    | otherwise = v
+toTerracedSimpleOscGain v t = v -- was more complicated, can just be this
 
 simpleOsc :: (String -> Number -> AudioUnit D1) -> String -> Number -> List (Tuple Number Number) -> AudioUnit D2
 simpleOsc f s time Nil = zero
@@ -3531,6 +3551,7 @@ natureBoy =
   , and13Voice
   , beLovedInReturn
   ]
+    <> veRyStrangeEnChanTedBoyHHs
     <> theySayHeWanderedBuildup
     <> secondPartBP
     <> secondPartVocalsUsingRig
@@ -3646,7 +3667,8 @@ main =
         , Tuple "flute" "https://media.graphcms.com/eiKfSNIbSaiomCZQzXGA"
         -- siren
         , Tuple "siren" "https://freesound.org/data/previews/534/534550_11837619-hq.mp3"
-        -- revcym
+        -- cym
+        , Tuple "hihat" "https://freesound.org/data/previews/128/128379_2010064-hq.mp3"
         , Tuple "revcym" "https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
         , Tuple "focym" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/forwardCymbal.mp3"
         -- drumz
