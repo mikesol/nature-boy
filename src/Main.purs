@@ -29,7 +29,7 @@ import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import FRP.Behavior (Behavior, behavior)
-import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, panner_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker, waveShaper_)
+import FRP.Behavior.Audio (AV(..), AudioContext, AudioParameter, AudioUnit, BrowserAudioBuffer, CanvasInfo(..), Oversample(..), allpass_, audioWorkletProcessor_, bandpass_, convolver_, decodeAudioDataFromUri, defaultExporter, defaultParam, delay_, dup2, dup2_, evalPiecewise, g'add_, g'delay_, g'gain_, g'highpass_, gainT_, gainT_', gain_, gain_', graph_, highpassT_, highpass_, iirFilter_, loopBuf_, lowpass_, lowshelf_, makeFloatArray, makePeriodicWave, microphone_, mul_, notch_, pannerMono_, panner_, peaking_, periodicOsc_, playBufWithOffset_, playBuf_, runInBrowser_, sinOsc_, speaker', waveShaper_)
 import FRP.Event (Event, makeEvent, subscribe)
 import Foreign.Object as O
 import Graphics.Canvas (Rectangle)
@@ -461,7 +461,7 @@ aVoicePedal =
               { aggregators:
                   { out: Tuple (g'add_ "aVoicePedalOut") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "aVoicePedalCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "aVoicePedalGain" 0.94) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "aVoicePedalGain" 0.4) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
                   { del: Tuple (g'delay_ "aVoicePedalDelay" 0.1) (SProxy :: SProxy "combine")
@@ -542,7 +542,7 @@ butPedalVoice =
               { aggregators:
                   { out: Tuple (g'add_ "butPedalVoiceOut") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "butPedalVoiceCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "butPedalVoiceGain" 0.94) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "butPedalVoiceGain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
                   { del: Tuple (g'delay_ "butPedalVoiceDelay" 0.1) (SProxy :: SProxy "combine")
@@ -585,13 +585,18 @@ heAccomp = alsAccomp "he" He6 He6 :: SigAU
 
 heRichSwell :: SigAU
 heRichSwell =
-  boundByCueWithOnset Ve6 Was6
+  boundByCueWithOnset Wise6 He6
     ( \ac onset m t ->
         let
           time = t - onset
         in
-          pure (pannerMono_ "heRichSwellPan" 0.0 (gain_ "heRichSwellFade" 1.0 ((gain_' "heRichSwellGain0" (max 0.3 $ time * 0.4) (periodicOsc_ "heRichSwellOsc0" "rich" (conv440 32.0))) :| (gain_' "heRichSwellGain1" (max 0.2 $ time * 0.5) (periodicOsc_ "heRichSwellOsc1" "rich" (conv440 44.0))) : Nil)))
+          pure (pannerMono_ "heRichSwellPan" 0.0 (gain_ "heRichSwellFade" 1.0 ((gain_' "heRichSwellGain0" (min 0.3 $ time * 0.03) (periodicOsc_ "heRichSwellOsc0" "rich" (conv440 32.0))) :| (gain_' "heRichSwellGain1" (min 0.2 $ time * 0.05) (periodicOsc_ "heRichSwellOsc1" "rich" (conv440 44.0))) : Nil)))
     )
+
+thenOneDayWah0 :: SigAU
+thenOneDayWah0 =
+  boundByCueWithOnset Then7 Day7
+    (\ac onset m t -> let time = t - onset in wah "lowWach" "smooth" 10.0 43 (37.0 : 49.0 : Nil) Nothing 0.8 0.0 0.0 0.0 time)
 
 -- (wah "test" "smooth" 0.4 3 (60.0 : 64.0 : 67.0 : Nil) Nothing 0.2 0.9 0.5 0.5 time)
 bpWah :: Number -> String -> String -> Number -> Int -> List Number -> Maybe Number -> Number -> Number -> Number -> Number -> Number -> List (AudioUnit D2)
@@ -1109,12 +1114,6 @@ theySayHeWanderedBuildup =
       , AOLFQ 0.9 4.2 1.6 1500.0 6.0
       , AOLFQ 1.2 3.1 0.3 700.0 4.0
       ]
-  , theySayHeWanderedCymbalFragment Far2 Ve3
-      [ AOLFQ 0.0 1.2 1.0 1000.0 3.0
-      , AOLFQ 0.6 1.4 1.2 500.0 2.0
-      , AOLFQ 0.9 2.0 1.5 1500.0 6.0
-      , AOLFQ 1.2 1.7 0.9 700.0 4.0
-      ]
   ] ::
     Array SigAU
 
@@ -1141,7 +1140,7 @@ celloLowGSharpRack time =
 
 celloVeryStrangeEnchantedDrone :: SigAU
 celloVeryStrangeEnchantedDrone =
-  boundByCueWithOnset A1 Boy1
+  boundByCueWithOnset A1 He2
     ( \ac onset m t ->
         let
           now = t - onset
@@ -1149,15 +1148,15 @@ celloVeryStrangeEnchantedDrone =
           pure
             ( gain_
                 "CelloFadeInOut"
-                ( if m < Chan1 then
+                ( if m < Boy1 then
                     -- fade in if below <= En1
                     (min (now * 0.5) 1.0)
                   else
                     -- fade out if > Chan1
                     ( maybe
                         1.0
-                        (\chan -> max 0.0 (1.0 - ((t - chan) * 0.2)))
-                        (M.lookup Chan1 ac.markerOnsets)
+                        (\o -> max 0.0 (1.0 - ((t - o) * 0.1)))
+                        (M.lookup Boy1 ac.markerOnsets)
                     )
                 )
                 (toNel (celloLowGSharpRack now))
@@ -1651,34 +1650,42 @@ guitarSingleton tag name gain st =
               )
     )
 
-snare :: SigAU
-snare =
-  boundByCue Ver4 And4
+modDel :: String -> Marker -> Marker -> SigAU
+modDel buf st ed =
+  boundByCue st ed
     ( \m t ->
         pure
           $ graph_
-              "SnareGrpah"
+              (buf <> m2s st <> "ModDelGrpah")
               { aggregators:
-                  { out: Tuple (g'add_ "SnareOut") (SLProxy :: SLProxy ("combine" :/ SNil))
-                  , combine: Tuple (g'add_ "SnareCombine") (SLProxy :: SLProxy ("gain" :/ "snare" :/ SNil))
-                  , gain: Tuple (g'gain_ "SnareGraphGain" 0.93) (SLProxy :: SLProxy ("del" :/ SNil))
+                  { out: Tuple (g'add_ (buf <> m2s st <> "ModDelOut")) (SLProxy :: SLProxy ("combine" :/ SNil))
+                  , combine: Tuple (g'add_ (buf <> m2s st <> "ModDelCombine")) (SLProxy :: SLProxy ("gain" :/ "snare" :/ SNil))
+                  , gain: Tuple (g'gain_ (buf <> m2s st <> "ModDelGraphGain") 0.93) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
-                  { del: Tuple (g'delay_ "SnareGraphDelay" (0.31 + 0.02 * sin (pi * t))) (SProxy :: SProxy "combine")
+                  { del: Tuple (g'delay_ (buf <> m2s st <> "ModDelGraphDelay") (0.31 + 0.02 * sin (pi * t))) (SProxy :: SProxy "combine")
                   }
               , generators:
                   { snare:
-                      ( gain_' "SnareGain"
+                      ( gain_' (buf <> m2s st <> "ModDelGain")
                           0.6
                           ( playBuf_
-                              "SnareBuf"
-                              "snare-hit"
+                              (buf <> m2s st <> "SnareBuf")
+                              buf
                               1.0
                           )
                       )
                   }
               }
     )
+
+snare = modDel "snare-hit" Ver4 And4 :: SigAU
+
+kick = modDel "kick" Then7 Day7 :: SigAU
+
+snarePassed = modDel "snare-hit" Passed8 Way8 :: SigAU
+
+kickMa = modDel "kick" Ma9 Things9 :: SigAU
 
 bassLick :: String -> Number -> Number -> SigAU
 bassLick tag os p = bassplz Kings10 This11 os tag 1.0 0.2 0.1 5.0 (lowpass_ "kings-bp" 250.0 10.0) 0.3 false (const $ conv1 p)
@@ -1822,7 +1829,7 @@ improGlitch =
         let
           time = t - onset
         in
-          pure (gainT_' "improGlitchGain" (epwf [ Tuple 0.0 0.3, Tuple 5.0 1.0, Tuple 5.04 0.07, Tuple 10.0 0.07, Tuple 13.0 1.0, Tuple 15.0 1.0, Tuple 15.4 0.07, Tuple 20.0 0.07, Tuple 26.0 1.0, Tuple 31.0 1.0, Tuple 31.02 0.07, Tuple 33.0 0.07, Tuple 33.05 1.0, Tuple 33.38 1.0, Tuple 33.44 0.13, Tuple 36.0 0.07, Tuple 40.0 0.13, Tuple 48.1 0.13, Tuple 50.0 0.7, Tuple 54.3 0.7, Tuple 55.0 0.1, Tuple 57.0 0.0, Tuple 63.0 0.0, Tuple 66.0 0.1, Tuple 71.0 0.1, Tuple 71.2 0.0, Tuple 74.0 0.0, Tuple 74.2 0.6, Tuple 74.8 0.2, Tuple 90.0 0.0 ] time) (playBuf_ "improGlitchBuf" "impro-glitch" 1.0))
+          pure (gainT_' "improGlitchGain" (epwf [ Tuple 0.0 0.0, Tuple 0.4 0.3, Tuple 5.0 1.0, Tuple 5.04 0.07, Tuple 10.0 0.07, Tuple 13.0 1.0, Tuple 15.0 1.0, Tuple 15.4 0.07, Tuple 20.0 0.07, Tuple 26.0 1.0, Tuple 31.0 1.0, Tuple 31.02 0.07, Tuple 33.0 0.07, Tuple 33.05 1.0, Tuple 33.38 1.0, Tuple 33.44 0.13, Tuple 36.0 0.07, Tuple 40.0 0.13, Tuple 48.1 0.13, Tuple 50.0 0.7, Tuple 54.3 0.7, Tuple 55.0 0.1, Tuple 57.0 0.0, Tuple 63.0 0.0, Tuple 66.0 0.1, Tuple 71.0 0.1, Tuple 71.2 0.0, Tuple 74.0 0.0, Tuple 74.2 0.6, Tuple 74.8 0.2, Tuple 90.0 0.0 ] time) (playBuf_ "improGlitchBuf" "impro-glitch" 1.0))
     )
 
 improWobble :: SigAU
@@ -2721,6 +2728,9 @@ foolsVoice = boundByCueWithOnset Fools10 Fools10 \_ onset _ t -> let time = t - 
 and13Voice :: SigAU
 and13Voice = boundByCueWithOnset And13 And13 \_ onset _ t -> let time = t - onset in pure (and13Filt time (pmic "and13Mic"))
 
+waveshaperVocal :: String -> Number -> AudioUnit D2 -> AudioUnit D2
+waveshaperVocal tag dry i = dup2_ (tag <> "dup") i \v -> (gain_ (tag <> "-waveshaper-gate") 1.0 ((gain_' (tag <> "gain-ws") (1.0 - dry) $ waveShaper_ "wave-shaper-day" "wicked" TwoX v) :| ((gain_' (tag <> "gain-norm") dry v) : Nil)))
+
 secondPartVocalsUsingRig =
   [ secondPartVocalRig "then-7-voice" Then7 One7 then7Filt
   , secondPartVocalRig "one-7-voice" One7 Day7
@@ -2729,7 +2739,7 @@ secondPartVocalsUsingRig =
           <<< genericFB "one-7-middle" 0.1 0.3
           <<< genericFB "one-7-inner" 0.05 0.13
       )
-  , secondPartVocalRig "day-7-voice" Day7 One8 (\t -> genericFB "day-7-outter" 0.4 0.6 <<< waveShaper_ "wave-shaper-day" "wicked" (if t % 1.0 < 0.5 then TwoX else FourX))
+  , secondPartVocalRig "day-7-voice" Day7 One8 (\t -> genericFB "day-7-outter" 0.4 0.6 <<< waveshaperVocal "day-7" 0.7)
   , secondPartVocalRig "one-8-voice" One8 Ma8
       ( const
           $ genericFB "one-8-outter" 0.2 0.4
@@ -2746,7 +2756,7 @@ secondPartVocalsUsingRig =
           <<< genericFB "my-8-middle" 0.1 0.3
           <<< genericFB "my-8-inner" 0.05 0.13
       )
-  , secondPartVocalRig "way-8-voice" Way8 And9 (\t -> genericFB "way-8-outter" 0.4 0.6 <<< waveShaper_ "wave-shaper-way" "wicked" (if t % 0.36 < 0.18 then TwoX else FourX))
+  , secondPartVocalRig "way-8-voice" Way8 And9 (\t -> genericFB "way-8-outter" 0.4 0.6 <<< waveshaperVocal "way-8" 0.7)
   , secondPartVocalRig "and-9-voice" And9 While9 (const $ genericFB "and-9-outter" 0.26 0.7)
   , secondPartVocalRig "while-9-voice" While9 We9 (const $ genericFB "while-9-outter" 0.21 0.6)
   , secondPartVocalRig "we-9-voice" We9 Spoke9 (const $ genericFB "we-9-outter" 0.15 0.5)
@@ -3334,7 +3344,7 @@ day'H = mkSecondHalfHarm Day8 Day8 [ Tuple DayBase0 10.0 ] [] :: SigAU
 
 heH = mkSecondHalfHarm He8 He8 [ Tuple HeBase0 10.0 ] [] :: SigAU
 
-passedMyH = mkSecondHalfHarm Passed8 Passed8 [ Tuple PassedMyBase0 1.5, Tuple PassedMyBase1 5.0 ] [ Tuple PassedMyIntj0 (Tuple 1.1 0.3), Tuple PassedMyIntj1 (Tuple 1.3 0.3) ] :: SigAU
+passedMyH = mkSecondHalfHarm Passed8 My8 [ Tuple PassedMyBase0 1.5, Tuple PassedMyBase1 5.0 ] [ Tuple PassedMyIntj0 (Tuple 1.1 0.3), Tuple PassedMyIntj1 (Tuple 1.3 0.3) ] :: SigAU
 
 wayH = mkSecondHalfHarm Way8 Way8 [ Tuple AndThenOneDayBase1 1.2, Tuple AndThenOneDayBase0 1.2, Tuple AndThenOneDayBase1 1.2, Tuple AndThenOneDayBase0 1.2, Tuple AndThenOneDayBase1 5.0 ] [ Tuple AndThenOneDayIntj1 (Tuple 0.4 0.2), Tuple AndThenOneDayIntj3 (Tuple 0.9 0.1), Tuple AndThenOneDayIntj2 (Tuple 1.3 0.1), Tuple AndThenOneDayIntj0 (Tuple 1.8 0.1), Tuple AndThenOneDayIntj2 (Tuple 2.4 0.4), Tuple AndThenOneDayIntj3 (Tuple 2.9 0.18), Tuple AndThenOneDayIntj1 (Tuple 3.15 0.18) ] :: SigAU
 
@@ -3470,9 +3480,12 @@ natureBoy =
   , scratchySwellHe
   , wiseWasHeAndClock
   ----------- pt 2
+  , thenOneDayWah0
   , andPt2Voice
+  , kick
   , slowDrumSecondPart
   , thenOneDayOneMagicDayHePassedMyWayDrums
+  , snarePassed
   , bassGlitch1
   , bassGlitch2
   , bassManyThings
@@ -3480,6 +3493,7 @@ natureBoy =
   , improWobble
   , improFiligree
   , shredderManyThings
+  , kickMa
   , maVoice
   , ny9Voice
   , thingsVoice
@@ -3511,7 +3525,17 @@ scene inter acc' ci'@(CanvasInfo ci) time = go <$> (interactionLog inter)
   go p =
     AV
       ( Just
-          ( speaker (toNel players.aus)
+          ( speaker'
+              ( gain_ "globalMasterFader"
+                  ( if players.audAcc.currentMarker == Just Turn13 then
+                      ( maybe 1.0 (\o -> max 0.0 $ 1.0 - 0.05 * (time - o))
+                          (M.lookup Turn13 players.audAcc.markerOnsets)
+                      )
+                    else
+                      1.0
+                  )
+                  $ toNel players.aus
+              )
           )
       )
       (Just (snd cvs))
@@ -3603,6 +3627,7 @@ main =
         -- revcym
         , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
         -- drumz
+        , Tuple "kick" "https://freesound.org/data/previews/189/189174_3296371-hq.mp3"
         , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.mp3"
         , Tuple "drumz-cat-55" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs55.ogg"
         , Tuple "drumz-cat-80" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs80.ogg"

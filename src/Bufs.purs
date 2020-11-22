@@ -12,6 +12,8 @@ bufs =
   -- revcym
   , Tuple "revcym" " https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
   -- drumz
+          , Tuple "kick" "https://freesound.org/data/previews/189/189174_3296371-hq.mp3"
+
   , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.mp3"
   , Tuple "drumz-cat-55" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs55.ogg"
   , Tuple "drumz-cat-80" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumz-catCrabs80.ogg"
