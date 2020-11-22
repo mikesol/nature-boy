@@ -1066,54 +1066,54 @@ theySayHeWanderedCymbalFragment st ed olfq =
 theySayHeWanderedBuildup =
   [ theySayHeWanderedCymbalFragment They2 Say2
       [ AOLFQ 0.0 0.8 0.8 1000.0 3.0
-      , AOLFQ 0.6 1.4 0.5 500.0 2.0
-      , AOLFQ 0.9 1.5 0.6 1500.0 6.0
-      , AOLFQ 1.3 1.0 0.3 700.0 4.0
+      , AOLFQ 0.6 1.4 1.2 500.0 2.0
+      , AOLFQ 0.9 1.5 1.6 1500.0 6.0
+      , AOLFQ 1.3 1.0 0.8 700.0 4.0
       ]
   , theySayHeWanderedCymbalFragment Say2 He2
       [ AOLFQ 0.0 1.2 0.8 1000.0 3.0
-      , AOLFQ 0.5 1.4 0.5 500.0 2.0
-      , AOLFQ 0.9 2.0 0.6 1500.0 6.0
+      , AOLFQ 0.5 1.4 1.2 500.0 2.0
+      , AOLFQ 0.9 2.0 0.9 1500.0 6.0
       , AOLFQ 1.4 1.7 1.0 700.0 4.0
       ]
   , theySayHeWanderedCymbalFragment He2 Wan2
-      [ AOLFQ 0.0 1.6 0.8 1000.0 3.0
-      , AOLFQ 0.4 2.3 0.5 500.0 2.0
-      , AOLFQ 0.8 2.6 0.7 1500.0 6.0
-      , AOLFQ 1.2 2.5 0.5 700.0 4.0
+      [ AOLFQ 0.0 1.6 1.2 1000.0 3.0
+      , AOLFQ 0.4 2.3 1.1 500.0 2.0
+      , AOLFQ 0.8 2.6 1.3 1500.0 6.0
+      , AOLFQ 1.2 2.5 0.9 700.0 4.0
       ]
   , theySayHeWanderedCymbalFragment Wan2 Dered2
-      [ AOLFQ 0.0 2.3 0.8 1000.0 3.0
-      , AOLFQ 0.35 3.3 0.5 500.0 2.0
-      , AOLFQ 0.7 4.2 0.6 1500.0 6.0
-      , AOLFQ 1.05 3.1 0.3 2800.0 8.0
-      , AOLFQ 1.2 4.5 0.4 700.0 4.0
+      [ AOLFQ 0.0 2.3 1.3 1000.0 3.0
+      , AOLFQ 0.35 3.3 0.9 500.0 2.0
+      , AOLFQ 0.7 4.2 1.6 1500.0 6.0
+      , AOLFQ 1.05 3.1 1.3 2800.0 8.0
+      , AOLFQ 1.2 4.5 1.4 700.0 4.0
       ]
   , theySayHeWanderedCymbalFragment Dered2 Ve2
-      [ AOLFQ 0.0 4.8 0.8 1600.0 7.0
-      , AOLFQ 0.3 5.1 0.5 500.0 2.0
-      , AOLFQ 0.6 5.9 0.15 3000.0 6.0
-      , AOLFQ 0.9 5.5 0.5 300.0 2.0
-      , AOLFQ 1.2 5.8 0.3 2000.0 4.0
+      [ AOLFQ 0.0 4.8 1.8 1600.0 7.0
+      , AOLFQ 0.3 5.1 1.5 500.0 2.0
+      , AOLFQ 0.6 5.9 1.15 3000.0 6.0
+      , AOLFQ 0.9 5.5 1.5 300.0 2.0
+      , AOLFQ 1.2 5.8 0.9 2000.0 4.0
       ]
   , theySayHeWanderedCymbalFragment Ve2 Ry2
-      [ AOLFQ 0.0 4.8 0.8 1600.0 7.0
-      , AOLFQ 0.3 4.7 0.5 500.0 2.0
-      , AOLFQ 0.6 4.2 0.15 3000.0 6.0
-      , AOLFQ 0.9 4.8 0.5 300.0 2.0
-      , AOLFQ 1.2 3.9 0.3 1500.0 4.0
+      [ AOLFQ 0.0 4.8 1.8 1600.0 7.0
+      , AOLFQ 0.3 4.7 1.5 500.0 2.0
+      , AOLFQ 0.6 4.2 0.9 3000.0 6.0
+      , AOLFQ 0.9 4.8 1.2 300.0 2.0
+      , AOLFQ 1.2 3.9 0.4 1500.0 4.0
       ]
   , theySayHeWanderedCymbalFragment Ry2 Far2
       [ AOLFQ 0.0 2.3 0.8 1000.0 3.0
-      , AOLFQ 0.6 3.3 0.5 500.0 2.0
-      , AOLFQ 0.9 4.2 0.6 1500.0 6.0
+      , AOLFQ 0.6 3.3 1.3 500.0 2.0
+      , AOLFQ 0.9 4.2 1.6 1500.0 6.0
       , AOLFQ 1.2 3.1 0.3 700.0 4.0
       ]
   , theySayHeWanderedCymbalFragment Far2 Ve3
-      [ AOLFQ 0.0 1.2 0.8 1000.0 3.0
-      , AOLFQ 0.6 1.4 0.5 500.0 2.0
-      , AOLFQ 0.9 2.0 0.6 1500.0 6.0
-      , AOLFQ 1.2 1.7 0.3 700.0 4.0
+      [ AOLFQ 0.0 1.2 1.0 1000.0 3.0
+      , AOLFQ 0.6 1.4 1.2 500.0 2.0
+      , AOLFQ 0.9 2.0 1.5 1500.0 6.0
+      , AOLFQ 1.2 1.7 0.9 700.0 4.0
       ]
   ] ::
     Array SigAU
