@@ -169,8 +169,8 @@ mic = microphone_ :: String -> AudioUnit D1
 pmic :: String -> AudioUnit D2
 pmic s = pannerMono_ ("voicePanner" <> s) 0.0 (mic s)
 
-t1c440 :: Number -> Tuple Number Number
-t1c440 = Tuple 1.0 <<< conv440
+t1c440 :: Number -> Number -> Tuple Number Number
+t1c440 gn = Tuple gn <<< conv440
 
 loopDownload :: AudioContext -> String -> Aff BrowserAudioBuffer
 loopDownload ctx str =
@@ -570,7 +570,7 @@ alsAccomp tag st ed =
         let
           time = t - onset
         in
-          pure (bandpass_ (tag <> "ALittleShyBandpass") (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ (tag <> "ALittleShyBuf") tag 1.0 0.0 0.0 ) -- (0.6 + 0.6 * sin (time * pi)) (3.248 + 0.6 * sin (time * pi))
+          pure (bandpass_ (tag <> "ALittleShyBandpass") (1000.0 + 400.0 * sin (pi * time * 0.2)) (3.0 + 2.5 * sin (pi * time * 0.3)) $ loopBuf_ (tag <> "ALittleShyBuf") tag 1.0 0.0 0.0) -- (0.6 + 0.6 * sin (time * pi)) (3.248 + 0.6 * sin (time * pi))
     )
 
 preALittleShyAccomp = alsAccomp "pre-a-little-shy" Sea4 A5 :: SigAU
@@ -590,7 +590,7 @@ heRichSwell =
         let
           time = t - onset
         in
-          pure (pannerMono_ "heRichSwellPan" 0.0 (gain_ "heRichSwellFade" 1.0 ((gain_' "heRichSwellGain0" (min 0.3 $ time * 0.03) (periodicOsc_ "heRichSwellOsc0" "rich" (conv440 32.0))) :| (gain_' "heRichSwellGain1" (min 0.2 $ time * 0.05) (periodicOsc_ "heRichSwellOsc1" "rich" (conv440 44.0))) : Nil)))
+          pure (pannerMono_ "heRichSwellPan" 0.0 (gain_ "heRichSwellFade" 1.0 ((gain_' "heRichSwellGain0" (min 0.3 $ time * 0.02) (periodicOsc_ "heRichSwellOsc0" "rich" (conv440 32.0))) :| (gain_' "heRichSwellGain1" (min 0.2 $ time * 0.02) (periodicOsc_ "heRichSwellOsc1" "rich" (conv440 44.0))) : Nil)))
     )
 
 thenOneDayWah0 :: SigAU
@@ -1171,7 +1171,7 @@ veRyStrangeEn =
           { aggregators:
               { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
               , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.7 (0.7 * 0.5 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
+              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.6 (0.6 + 0.5 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
               }
           , processors:
               { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.2) (SProxy :: SProxy "combine")
@@ -1192,7 +1192,7 @@ chanTed =
               { aggregators:
                   { out: Tuple (g'add_ "Chan1Out") (SLProxy :: SLProxy ("combine" :/ SNil))
                   , combine: Tuple (g'add_ "Chan1Combine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-                  , gain: Tuple (g'gain_ "Chan1Gain" 0.3) (SLProxy :: SLProxy ("del" :/ SNil))
+                  , gain: Tuple (g'gain_ "Chan1Gain" 0.6) (SLProxy :: SLProxy ("del" :/ SNil))
                   }
               , processors:
                   { del: Tuple (g'delay_ "Chan1Delay" 0.25) (SProxy :: SProxy "combine")
@@ -1702,7 +1702,7 @@ thisHeSaidToMeLicks tag n st ed =
 
 -- start with c#
 secondPartBP =
-  [ bassplz Then7 Day7 0.0 "first-C#" 1.0 0.37 0.7 0.0 identity 0.3 false (const $ conv1 0.0)
+  [ bassplz Then7 Day7 0.0 "first-C#" 1.0 0.37 0.9 0.0 identity 0.3 false (const $ conv1 0.0)
   -- glitch of c#, smaller
   , bassplz One7 One7 0.1 "C#-echo" 0.5 0.04 0.3 4.0 (highpass_ "glitch-c#" 300.0 1.0) 0.1 false (const $ conv1 0.0)
   -- g#
@@ -1854,17 +1854,17 @@ improFiligree =
 
 ------------------------
 compVeryStrangeEnchantedBoy :: Marker -> List (Tuple Number Number)
-compVeryStrangeEnchantedBoy Ve1 = t1c440 <$> 54.0 : 58.0 : 61.0 : Nil
+compVeryStrangeEnchantedBoy Ve1 = t1c440 0.2 <$> 54.0 : 58.0 : 61.0 : Nil
 
-compVeryStrangeEnchantedBoy Ry1 = t1c440 <$> 56.0 : 58.0 : 60.0 : Nil
+compVeryStrangeEnchantedBoy Ry1 = t1c440 0.4 <$> 56.0 : 58.0 : 60.0 : Nil
 
-compVeryStrangeEnchantedBoy Strange1 = t1c440 <$> 58.0 : 61.0 : 63.0 : Nil
+compVeryStrangeEnchantedBoy Strange1 = t1c440 0.5 <$> 58.0 : 61.0 : 63.0 : Nil
 
-compVeryStrangeEnchantedBoy En1 = t1c440 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
+compVeryStrangeEnchantedBoy En1 = t1c440 0.7 <$> 62.0 : 65.0 : 68.0 : 71.0 : Nil
 
-compVeryStrangeEnchantedBoy Chan1 = t1c440 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
+compVeryStrangeEnchantedBoy Chan1 = t1c440 1.0 <$> 61.0 : 63.0 : 66.0 : 70.0 : Nil
 
-compVeryStrangeEnchantedBoy Ted1 = t1c440 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
+compVeryStrangeEnchantedBoy Ted1 = t1c440 0.6 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
 
 -- compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
 compVeryStrangeEnchantedBoy _ = Nil
@@ -3103,7 +3103,7 @@ shredderImpro buf len stgn st ed =
   where
   tg = m2s st <> m2s ed
 
-shredderManyThings = shredderImpro "nice-high-shred" 20.0 0.9 Ny9 Me11 :: SigAU
+shredderManyThings = shredderImpro "nice-high-shred" 20.0 0.75 Ny9 Me11 :: SigAU
 
 data SecondHalfHarmony
   = AndBase0
@@ -3393,7 +3393,7 @@ thisHeSaidToMePedal = makePedal "manyThingsPedal2" This11 Me11 :: SigAU
 
 thstmMachine :: Marker -> Marker -> Number -> Array String -> SigAU
 thstmMachine st ed gap bufz =
-  boundByCueWithOnset And7 And7
+  boundByCueWithOnset st ed
     (\ac onset m t' -> let time = t' - onset in fold (map (\f -> f time) (mapWithIndex (\i s -> atT (toNumber i * gap) $ boundPlayer (gap + 0.04) (\t -> pure (gainT_' (m2s st <> show i <> "gain") (epwf [ Tuple 0.0 1.0, Tuple (gap - 0.02) 1.0, Tuple (gap + 0.02) 0.0 ] t) (playBufWithOffset_ (m2s st <> show i <> "buf") s 1.0 (0.5 + (t' % 1.0)))))) bufz))) -- use t' for modulo
 
 thisFinal = thstmMachine This11 This11 0.35 [ "thisHeSaidToMeBase0", "thisHeSaidToMeBase1", "thisHeSaidToMeBase2", "thisHeSaidToMeBase1", "thisHeSaidToMeBase2", "thisHeSaidToMeBase0", "thisHeSaidToMeBase0", "thisHeSaidToMeBase1", "thisHeSaidToMeBase0", "thisHeSaidToMeBase2", "thisHeSaidToMeBase1" ] :: SigAU
@@ -3888,3 +3888,6 @@ withInteractions (Interactions { interactions }) e =
 
 interactionLog :: Interactions -> Behavior (InteractionOnsets)
 interactionLog m = behavior \e -> map (\{ value, interactions: bs } -> value bs) (withInteractions m e)
+
+-- performance notes
+-- - dim on "chan", then cresc on "ted"
