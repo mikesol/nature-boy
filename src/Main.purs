@@ -1954,7 +1954,7 @@ compVeryStrangeEnchantedBoy _ = Nil
 poscVeryStrangeEnchantedBoy :: Marker -> String
 poscVeryStrangeEnchantedBoy Ve1 = "smooth"
 
-poscVeryStrangeEnchantedBoy Ry1 = "smooth1"
+poscVeryStrangeEnchantedBoy Ry1 = "smooth3"
 
 poscVeryStrangeEnchantedBoy Strange1 = "smooth2"
 
@@ -1962,7 +1962,7 @@ poscVeryStrangeEnchantedBoy En1 = "smooth3"
 
 poscVeryStrangeEnchantedBoy Chan1 = "smooth"
 
-poscVeryStrangeEnchantedBoy Ted1 = "smooth1"
+poscVeryStrangeEnchantedBoy Ted1 = "smooth3"
 
 poscVeryStrangeEnchantedBoy _ = "smooth"
 
