@@ -1046,9 +1046,9 @@ heGong1 = tshwvfGong "kettle-a-3" He11 Said11 0.26 :: SigAU
 
 saidGong1 = tshwvfGong "kettle-g-sharp-3" Said11 To11 0.23 :: SigAU
 
-toGong1 = tshwvfGong "kettle-g-sharp-3" Me11 Me11 0.2 :: SigAU
+toGong1 = tshwvfGong "kettle-g-sharp-3" To11 Me11 0.2 :: SigAU
 
-meGong1 = tshwvfGong "kettle-e-flat-4" Dered2 Ry2 0.18 :: SigAU
+meGong1 = tshwvfGong "kettle-e-flat-4" Me11 Me11 0.18 :: SigAU
 gongs = [ theyGong0, sayGong0, heGong0, wanGong0, deredGong0, thisGong1, heGong1, saidGong1, toGong1, meGong1 ] :: Array SigAU
 
 --
@@ -1772,9 +1772,9 @@ modDel buf st ed gn =
 
 snare = modDel "snare-hit" Ver4 And4 0.6 :: SigAU
 
-kick = modDel "kick" Then7 Day7 1.0 :: SigAU
+kick = modDel "kick" Then7 Day7 0.0 :: SigAU
 
-snarePassed = modDel "snare-hit" Passed8 Way8 1.0 :: SigAU
+snarePassed = modDel "snare-hit" Passed8 Way8 0.6 :: SigAU
 
 cymMa = modDel "focym" Ma9 Things9 0.6 :: SigAU
 
