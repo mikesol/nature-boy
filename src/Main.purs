@@ -593,11 +593,11 @@ richSwell tag st ed p0p p0f p1p p1f =
           pure (pannerMono_ (tag <> "RichSwellPan") 0.0 (gain_ (tag <> "RichSwellFade") 1.0 ((gain_' (tag <> "RichSwellGain0") (p0f time) (periodicOsc_ (tag <> "RichSwellOsc0") "rich" p0p)) :| (gain_' (tag <> "RichSwellGain1") (p1f time) (periodicOsc_ (tag <> "RichSwellOsc1") "rich" p1p)) : Nil)))
     )
 
-shyRichSwell = richSwell "shy" Shy5 Shy5 (conv440 32.0) (\time -> max 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.3)) (conv440 44.0) (\time -> max 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.3))
+shyRichSwell = let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf :: SigAU
 
-eyeRichSwell = richSwell "eye" Eye5 Eye5 (conv440 37.0) (\time -> max 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.3)) (conv440 49.0) (\time -> max 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.3))
+eyeRichSwell = let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.06)) in richSwell "eye" Eye5 Eye5 (conv440 25.0) tf (conv440 37.0) tf :: SigAU
 
-heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02)
+heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
 
 thenOneDayWah0 :: SigAU
 thenOneDayWah0 =
@@ -645,7 +645,7 @@ veryWiseWasBassoon =
         let
           time = t - onset
         in
-          pure (gain_' "bassoonVeryWiseGain" (skewedTriangle01 0.3 5.0 time) (lowpass_ "bassoonVeryWiseLowpass" (50.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
+          pure (gain_' "bassoonVeryWiseGain" 1.0 (lowpass_ "bassoonVeryWiseLowpass" (50.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
     )
 
 veryWiseWasSkiddaw :: SigAU
@@ -1121,14 +1121,14 @@ theySayHeWanderedBuildup =
       , AOLFQR 1.05 3.1 1.3 2800.0 8.0 false
       , AOLFQR 1.2 4.5 1.4 700.0 4.0 false
       ]
-  , theySayHeWanderedCymbalFragment Dered2 Ve2
+  , theySayHeWanderedCymbalFragment Dered2 Ry2
       [ AOLFQR 0.0 4.8 1.8 1600.0 7.0 false
       , AOLFQR 0.3 5.1 1.5 500.0 2.0 false
       , AOLFQR 0.6 5.9 1.15 3000.0 6.0 false
       , AOLFQR 0.9 5.5 1.5 300.0 2.0 false
       , AOLFQR 1.2 5.8 0.9 2000.0 4.0 false
       ]
-  , theySayHeWanderedCymbalFragment Ve2 Ry2
+  , theySayHeWanderedCymbalFragment Ve2 Far2
       [ AOLFQR 0.0 5.1 1.3 1600.0 7.0 true
       , AOLFQR 0.3 5.0 1.5 500.0 2.0 true
       , AOLFQR 0.6 4.6 0.9 3000.0 6.0 true
@@ -1245,7 +1245,7 @@ veRyStrangeEnChanTedBoyHH tag gn hpf rate st ed =
         let
           time = t - onset
         in
-          pure (gain_' (tag <> "veryStrangeGain") gn (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ playBuf_ (tag <> "VeryStrangeLoopBUf") "gear" rate))
+          pure (panner_ (tag <> "VeryStrangePan") (sin (0.3 * time * pi)) (gain_' (tag <> "veryStrangeGain") gn (highpass_ (tag <> "VeryStrangeHPF") hpf 5.0 $ playBuf_ (tag <> "VeryStrangeLoopBUf") "gear" rate)))
     )
 
 veHH = veRyStrangeEnChanTedBoyHH "ve" 0.1 2000.0 0.9 Ve1 Strange1 :: SigAU
@@ -1720,8 +1720,8 @@ guitarSingleton tag name gain st =
               )
     )
 
-modDel :: String -> Marker -> Marker -> SigAU
-modDel buf st ed =
+modDel :: String -> Marker -> Marker -> Number -> SigAU
+modDel buf st ed gn =
   boundByCue st ed
     ( \m t ->
         pure
@@ -1738,9 +1738,9 @@ modDel buf st ed =
               , generators:
                   { snare:
                       ( gain_' (buf <> m2s st <> "ModDelGain")
-                          0.6
+                          gn
                           ( playBuf_
-                              (buf <> m2s st <> "SnareBuf")
+                              (buf <> m2s st <> "ModDelGain")
                               buf
                               1.0
                           )
@@ -1749,13 +1749,13 @@ modDel buf st ed =
               }
     )
 
-snare = modDel "snare-hit" Ver4 And4 :: SigAU
+snare = modDel "snare-hit" Ver4 And4 0.6 :: SigAU
 
-kick = modDel "kick" Then7 Day7 :: SigAU
+kick = modDel "kick" Then7 Day7 1.0 :: SigAU
 
-snarePassed = modDel "snare-hit" Passed8 Way8 :: SigAU
+snarePassed = modDel "snare-hit" Passed8 Way8 1.0 :: SigAU
 
-kickMa = modDel "kick" Ma9 Things9 :: SigAU
+kickMa = modDel "kick" Ma9 Things9 1.0 :: SigAU
 
 bassLick :: String -> Number -> Number -> SigAU
 bassLick tag os p = bassplz Kings10 This11 os tag 1.0 0.2 0.1 5.0 (lowpass_ "kings-bp" 250.0 10.0) 0.3 false (const $ conv1 p)
