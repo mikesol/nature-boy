@@ -595,7 +595,7 @@ richSwell tag st ed p0p p0f p1p p1f =
 
 shyRichSwell = (let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf) :: SigAU
 
-eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.06)) in richSwell "eye" Eye5 Eye5 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
+eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else skewedTriangle01 0.3 6.0 (time - 0.7)) * 0.27) in richSwell "eye" Eye5 Ve6 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
 
 heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
 
@@ -645,7 +645,7 @@ veryWiseWasBassoon =
         let
           time = t - onset
         in
-          pure (gain_' "bassoonVeryWiseGain" 1.0 (lowpass_ "bassoonVeryWiseLowpass" (50.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
+          pure (gain_' "bassoonVeryWiseGain" 1.0 (lowpass_ "bassoonVeryWiseLowpass" (200.0) 1.0 $ loopBuf_ "bassoonVeryWiseLoop" "bassoon-low-d" 1.0 0.7 1.9))
     )
 
 veryWiseWasSkiddaw :: SigAU
@@ -657,6 +657,15 @@ veryWiseWasSkiddaw =
         in
           pure (gain_' "skiddawVeryWiseGain" (1.0) (playBuf_ "skiddawVeryWiseBuf" "skiddaw-low-d" 1.0))
     )
+
+--
+littleShyGlock :: Marker -> Marker -> Number -> SigAU
+littleShyGlock st ed rate =
+  boundByCue'' st ed
+    ( pure (gain_' (m2s st <> "glock-d-gain") (1.0) (playBuf_ (m2s st <> "glock-d-buf") "glock-d" rate))
+    )
+
+shyGlock = littleShyGlock And5 Eye5 1.06 :: SigAU
 
 --
 tgtyelMain :: String -> Marker -> Marker -> SigAU
@@ -1262,16 +1271,19 @@ tedHH = veRyStrangeEnChanTedBoyHH "ted" 0.6 1500.0 0.97 Ted1 They2 :: SigAU
 
 boyHH = veRyStrangeEnChanTedBoyHH "boy" 0.4 3000.0 0.94 Boy1 Say2 :: SigAU
 
-veRyStrangeEnChanTedBoyHHs =
-  [ veHH
-  , ryHH
-  , strangeHH
-  , enHH
-  , chanHH
-  , tedHH
-  , boyHH
-  ] ::
-    Array SigAU
+veRyStrangeEnChanTedBoyHHList =
+  L.fromFoldable
+    [ veHH
+    , ryHH
+    , strangeHH
+    , enHH
+    , chanHH
+    , tedHH
+    , boyHH
+    ] ::
+    List SigAU
+
+veRyStrangeEnChanTedBoyHHs = boundByCue_ Ve1 Say2 (\acc m t -> Tuple acc $ pure (dup2_ "grinder-dup" (gain_ "grinder-gain" 1.0 (toNel (fold (map (\f -> snd (f acc m t)) veRyStrangeEnChanTedBoyHHList)))) \s -> gain_ "grinder-adder" 1.0 (gain_' "grinder-wet" 0.3 (convolver_ "grinder-verb" "matrix-verb-3" s) :| gain_' "grinder-dry" 0.7 s : Nil))) :: SigAU
 
 data Harm0
   = Harm0'A
@@ -1755,16 +1767,16 @@ kick = modDel "kick" Then7 Day7 1.0 :: SigAU
 
 snarePassed = modDel "snare-hit" Passed8 Way8 1.0 :: SigAU
 
-kickMa = modDel "kick" Ma9 Things9 1.0 :: SigAU
+cymMa = modDel "focym" Ma9 Things9 0.6 :: SigAU
 
 bassLick :: String -> Number -> Number -> SigAU
 bassLick tag os p = bassplz Kings10 This11 os tag 1.0 0.2 0.1 5.0 (lowpass_ "kings-bp" 250.0 10.0) 0.3 false (const $ conv1 p)
 
-thisHeSaidToMeLicks :: String -> Int -> Marker -> Marker -> Array SigAU
-thisHeSaidToMeLicks tag n st ed =
+thisHeSaidToMeLicks :: String -> Int -> Marker -> Marker -> Number -> Number -> Array SigAU
+thisHeSaidToMeLicks tag n st ed tp btm =
   map
     ( \i ->
-        let tni = toNumber i in bassplz st ed (tni * 1.6 / tnn) (show i <> tag) (if i < 4 then 0.7 + tni * 0.1 else 1.3 - tni * 0.1) 0.2 0.3 (4.0 + tni * 0.4) identity 0.3 false (const $ conv1 (-4.0) + (conv1 11.0 - conv1 (-4.0)) * tni / (tnn - 1.0))
+        let tni = toNumber i in bassplz st ed (tni * 1.6 / tnn) (show i <> tag) (if i < 4 then 0.7 + tni * 0.1 else 1.3 - tni * 0.1) 0.2 0.3 (4.0 + tni * 0.4) identity 0.3 false (const $ conv1 (btm) + (conv1 tp - conv1 (btm)) * tni / (tnn - 1.0))
     )
     (range 0 (n - 1))
   where
@@ -1824,10 +1836,10 @@ secondPartBP =
   , bassLick "lick-7" 3.71 (-2.0)
   , bassLick "lick-8" 3.8 (-8.0)
   ]
-    <> thisHeSaidToMeLicks "ladder-0" 4 This11 He11
-    <> thisHeSaidToMeLicks "ladder-1-" 5 He11 Said11
-    <> thisHeSaidToMeLicks "ladder-2-" 7 Said11 To11
-    <> thisHeSaidToMeLicks "ladder-3-" 11 To11 To11 ::
+    <> thisHeSaidToMeLicks "ladder-0" 2 This11 He11 11.0 (-4.0)
+    <> thisHeSaidToMeLicks "ladder-1-" 3 He11 Said11 5.0 (-6.0)
+    <> thisHeSaidToMeLicks "ladder-2-" 4 Said11 To11 3.0 (-8.0)
+    <> thisHeSaidToMeLicks "ladder-3-" 5 To11 To11 2.0 (-12.0) ::
     Array SigAU
 
 bassplz :: Marker -> Marker -> Number -> String -> Number -> Number -> Number -> Number -> (AudioUnit D2 -> AudioUnit D2) -> Number -> Boolean -> (Number -> Number) -> SigAU
@@ -1938,6 +1950,21 @@ compVeryStrangeEnchantedBoy Ted1 = t1c440 0.8 <$> 60.0 : 62.0 : 66.0 : 69.0 : Ni
 
 -- compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
 compVeryStrangeEnchantedBoy _ = Nil
+
+poscVeryStrangeEnchantedBoy :: Marker -> String
+poscVeryStrangeEnchantedBoy Ve1 = "smooth"
+
+poscVeryStrangeEnchantedBoy Ry1 = "smooth1"
+
+poscVeryStrangeEnchantedBoy Strange1 = "smooth2"
+
+poscVeryStrangeEnchantedBoy En1 = "smooth3"
+
+poscVeryStrangeEnchantedBoy Chan1 = "smooth"
+
+poscVeryStrangeEnchantedBoy Ted1 = "smooth1"
+
+poscVeryStrangeEnchantedBoy _ = "smooth"
 
 toTerracedSimpleOscGain :: Number -> Number -> Number
 toTerracedSimpleOscGain v t = v -- was more complicated, can just be this
@@ -2722,7 +2749,7 @@ veryStrangeEnchantedBoyComp =
       time = t - onset
     in
       ( pure
-          $ ( simpleOsc (\s n -> periodicOsc_ ("oscVeryStrangeEnchantedBoyComp" <> s) "smooth" n) (m2s cm) time (compVeryStrangeEnchantedBoy cm)
+          $ ( simpleOsc (\s n -> periodicOsc_ ("oscVeryStrangeEnchantedBoyComp" <> s) (poscVeryStrangeEnchantedBoy cm) n) (m2s cm) time (compVeryStrangeEnchantedBoy cm)
                 * audioWorkletProcessor_ "gateVeryStrangeEnchantedBoyComp"
                     "klank-amplitude"
                     O.empty
@@ -3176,7 +3203,7 @@ shredderImpro buf len stgn st ed =
   where
   tg = m2s st <> m2s ed
 
-shredderManyThings = shredderImpro "nice-high-shred" 6.0 0.3 Ny9 Me11 :: SigAU
+shredderManyThings = shredderImpro "nice-high-shred" 7.5 0.3 Ma9 Me11 :: SigAU
 
 data SecondHalfHarmony
   = AndBase0
@@ -3496,6 +3523,7 @@ natureBoy =
   , boy0
   , a1
   , celloVeryStrangeEnchantedDrone
+  , veRyStrangeEnChanTedBoyHHs
   , veryStrangeEnchantedBoyComp
   , veRyStrangeEn
   , chanTed
@@ -3547,6 +3575,7 @@ natureBoy =
   , shyRichSwell
   , eyeRichSwell
   , heRichSwell
+  , shyGlock
   , scratchySwellHe
   , wiseWasHeAndClock
   ----------- pt 2
@@ -3563,7 +3592,7 @@ natureBoy =
   , improWobble
   , improFiligree
   , shredderManyThings
-  , kickMa
+  , cymMa
   , maVoice
   , ny9Voice
   , thingsVoice
@@ -3580,7 +3609,6 @@ natureBoy =
   , beLovedInReturn
   ]
     <> tshwGongs
-    <> veRyStrangeEnChanTedBoyHHs
     <> theySayHeWanderedBuildup
     <> secondPartBP
     <> secondPartVocalsUsingRig
@@ -3717,7 +3745,6 @@ main =
         , Tuple "kettle-f-sharp-4" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/kettleFSharp4.ogg"
         -- impulses
         , Tuple "matrix-verb-3" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb3.wav"
-        , Tuple "matrix-verb-3" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb3.wav"
         , Tuple "matrix-verb-5" "https://klank-share.s3-eu-west-1.amazonaws.com/in-a-sentimental-mood/Samples/Impulses/matrix-reverb5.wav"
         -- harmonic stuff
         ------- interj
@@ -3729,6 +3756,7 @@ main =
         , Tuple "low-guitar-d" "https://freesound.org/data/previews/117/117675_646701-hq.mp3"
         , Tuple "skiddaw-low-d" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/skiddawLowD.ogg"
         --------------- harm
+        , Tuple "glock-d" "https://freesound.org/data/previews/348/348872_5450487-hq.mp3"
         , Tuple "harm-0" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad.ogg"
         , Tuple "harm-0-120" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad120.ogg"
         , Tuple "harm-0-110" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/cSharpMinorPad110.ogg"
@@ -3879,11 +3907,23 @@ main =
           makePeriodicWave ctx
             (0.5 +> 0.25 +> -0.1 +> 0.07 +> 0.1 +> empty)
             (0.2 +> 0.1 +> 0.01 +> -0.03 +> -0.1 +> empty)
+        smooth1 <-
+          makePeriodicWave ctx
+            (0.3 +> -0.42 +> 0.4 +> 0.1 +> -0.6 +> empty)
+            (-0.2 +> -0.05 +> 0.4 +> 0.35 +> 0.08 +> empty)
+        smooth2 <-
+          makePeriodicWave ctx
+            (0.2 +> -0.1 +> -0.4 +> 0.08 +> 0.05 +> empty)
+            (-0.6 +> -0.5 +> -0.02 +> 0.1 +> -0.06 +> empty)
+        smooth3 <-
+          makePeriodicWave ctx
+            (-0.2 +> 0.02 +> 0.08 +> -0.16 +> 0.1 +> empty)
+            (0.2 +> -0.05 +> 0.05 +> 0.12 +> 0.1 +> empty)
         rich <-
           makePeriodicWave ctx
             (0.1 +> 0.3 +> -0.1 +> 0.1 +> 0.2 +> 0.05 +> 0.1 +> 0.01 +> empty)
             (0.3 +> -0.5 +> -0.4 +> -0.03 +> -0.15 +> -0.2 +> -0.05 +> -0.02 +> empty)
-        res $ O.fromFoldable [ Tuple "smooth" smooth, Tuple "rich" rich ]
+        res $ O.fromFoldable [ Tuple "smooth" smooth, Tuple "smooth1" smooth1, Tuple "smooth2" smooth2,  Tuple "smooth3" smooth3, Tuple "rich" rich ]
     }
 
 newtype Interactions
