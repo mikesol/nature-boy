@@ -1040,8 +1040,8 @@ deredGong0 = tshwvfGong "kettle-f-sharp-4" Dered2 Ry2 0.18 :: SigAU
 
 veGong0 = tshwvfGong "kettle-g-sharp-3" Ve2 Far2 0.22 :: SigAU
 
-
 thisGong1 = tshwvfGong "kettle-f-sharp-4" This11 He11 0.3 :: SigAU
+
 heGong1 = tshwvfGong "kettle-a-3" He11 Said11 0.26 :: SigAU
 
 saidGong1 = tshwvfGong "kettle-g-sharp-3" Said11 To11 0.23 :: SigAU
@@ -1049,6 +1049,7 @@ saidGong1 = tshwvfGong "kettle-g-sharp-3" Said11 To11 0.23 :: SigAU
 toGong1 = tshwvfGong "kettle-g-sharp-3" To11 Me11 0.2 :: SigAU
 
 meGong1 = tshwvfGong "kettle-e-flat-4" Me11 Me11 0.18 :: SigAU
+
 gongs = [ theyGong0, sayGong0, heGong0, wanGong0, deredGong0, thisGong1, heGong1, saidGong1, toGong1, meGong1 ] :: Array SigAU
 
 --
@@ -1772,7 +1773,7 @@ modDel buf st ed gn =
 
 snare = modDel "snare-hit" Ver4 And4 0.6 :: SigAU
 
-kick = modDel "kick" Then7 Day7 0.0 :: SigAU
+kick = modDel "kick" Then7 Day7 0.9 :: SigAU
 
 snarePassed = modDel "snare-hit" Passed8 Way8 0.6 :: SigAU
 
@@ -3920,7 +3921,7 @@ main =
           makePeriodicWave ctx
             (0.1 +> 0.3 +> -0.1 +> 0.1 +> 0.2 +> 0.05 +> 0.1 +> 0.01 +> empty)
             (0.3 +> -0.5 +> -0.4 +> -0.03 +> -0.15 +> -0.2 +> -0.05 +> -0.02 +> empty)
-        res $ O.fromFoldable [ Tuple "smooth" smooth, Tuple "smooth1" smooth1, Tuple "smooth2" smooth2,  Tuple "smooth3" smooth3, Tuple "rich" rich ]
+        res $ O.fromFoldable [ Tuple "smooth" smooth, Tuple "smooth1" smooth1, Tuple "smooth2" smooth2, Tuple "smooth3" smooth3, Tuple "rich" rich ]
     }
 
 newtype Interactions
