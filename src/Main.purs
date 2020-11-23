@@ -1040,7 +1040,16 @@ deredGong0 = tshwvfGong "kettle-f-sharp-4" Dered2 Ry2 0.18 :: SigAU
 
 veGong0 = tshwvfGong "kettle-g-sharp-3" Ve2 Far2 0.22 :: SigAU
 
-tshwGongs = [ theyGong0, sayGong0, heGong0, wanGong0, deredGong0 ] :: Array SigAU
+
+thisGong1 = tshwvfGong "kettle-f-sharp-4" This11 He11 0.3 :: SigAU
+heGong1 = tshwvfGong "kettle-a-3" He11 Said11 0.26 :: SigAU
+
+saidGong1 = tshwvfGong "kettle-g-sharp-3" Said11 To11 0.23 :: SigAU
+
+toGong1 = tshwvfGong "kettle-g-sharp-3" Me11 Me11 0.2 :: SigAU
+
+meGong1 = tshwvfGong "kettle-e-flat-4" Dered2 Ry2 0.18 :: SigAU
+gongs = [ theyGong0, sayGong0, heGong0, wanGong0, deredGong0, thisGong1, heGong1, saidGong1, toGong1, meGong1 ] :: Array SigAU
 
 --
 nylonPlayer :: String -> Marker -> Marker -> Marker -> SigAU
@@ -1952,18 +1961,6 @@ compVeryStrangeEnchantedBoy Ted1 = t1c440 0.8 <$> 60.0 : 62.0 : 66.0 : 69.0 : Ni
 compVeryStrangeEnchantedBoy _ = Nil
 
 poscVeryStrangeEnchantedBoy :: Marker -> String
-poscVeryStrangeEnchantedBoy Ve1 = "smooth"
-
-poscVeryStrangeEnchantedBoy Ry1 = "smooth3"
-
-poscVeryStrangeEnchantedBoy Strange1 = "smooth2"
-
-poscVeryStrangeEnchantedBoy En1 = "smooth3"
-
-poscVeryStrangeEnchantedBoy Chan1 = "smooth"
-
-poscVeryStrangeEnchantedBoy Ted1 = "smooth3"
-
 poscVeryStrangeEnchantedBoy _ = "smooth"
 
 toTerracedSimpleOscGain :: Number -> Number -> Number
@@ -3608,7 +3605,7 @@ natureBoy =
   , and13Voice
   , beLovedInReturn
   ]
-    <> tshwGongs
+    <> gongs
     <> theySayHeWanderedBuildup
     <> secondPartBP
     <> secondPartVocalsUsingRig
