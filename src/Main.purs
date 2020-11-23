@@ -593,9 +593,9 @@ richSwell tag st ed p0p p0f p1p p1f =
           pure (pannerMono_ (tag <> "RichSwellPan") 0.0 (gain_ (tag <> "RichSwellFade") 1.0 ((gain_' (tag <> "RichSwellGain0") (p0f time) (periodicOsc_ (tag <> "RichSwellOsc0") "rich" p0p)) :| (gain_' (tag <> "RichSwellGain1") (p1f time) (periodicOsc_ (tag <> "RichSwellOsc1") "rich" p1p)) : Nil)))
     )
 
-shyRichSwell = let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf :: SigAU
+shyRichSwell = (let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf) :: SigAU
 
-eyeRichSwell = let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.06)) in richSwell "eye" Eye5 Eye5 (conv440 25.0) tf (conv440 37.0) tf :: SigAU
+eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else (time - 0.7) * 0.06)) in richSwell "eye" Eye5 Eye5 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
 
 heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
 
