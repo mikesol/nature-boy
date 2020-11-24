@@ -595,7 +595,7 @@ richSwell tag st ed p0p p0f p1p p1f =
 
 shyRichSwell = (let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf) :: SigAU
 
-sadRichSwell = (let tf = (\time -> min 0.3 (skewedTriangle01 0.5 0.9 time)) * 0.5) in richSwell "sad" And5 Sad5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
+sadRichSwell = (let tf = (\time -> min 0.3 $ (skewedTriangle01 0.5 0.9 time)* 0.5)) in richSwell "sad" And5 Sad5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
 
 eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else skewedTriangle01 0.3 6.0 (time - 0.7)) * 0.27) in richSwell "eye" Eye5 Ve6 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
 
