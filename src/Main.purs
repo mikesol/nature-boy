@@ -595,11 +595,23 @@ richSwell tag st ed p0p p0f p1p p1f =
 
 shyRichSwell = (let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf) :: SigAU
 
-sadRichSwell = (let tf = (\time -> min 0.3 $ (skewedTriangle01 0.5 0.9 time)* 0.5)) in richSwell "sad" And5 Sad5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
+sadRichSwell = (let tf = (\time -> (skewedTriangle01 0.5 0.9 time) * 0.15) in richSwell "sad" And5 Sad5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
 
 eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else skewedTriangle01 0.3 6.0 (time - 0.7)) * 0.27) in richSwell "eye" Eye5 Ve6 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
 
 heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
+
+foolRichSwell = (let tf = (\time -> (skewedTriangle01 0.42 6.3 time) * 0.3) in richSwell "sad" Fools10 Kings10 (conv440 30.0) tf (conv440 42.0) tf) :: SigAU
+
+foolHigh :: SigAU
+foolHigh =
+  boundByCueWithOnset Fools10 Kings10
+    (\ac onset m t -> let time = t - onset in pure (gainT_ "foolsHighGain" (epwf [ Tuple 0.0 0.0, Tuple 3.1 0.2, Tuple 6.0 0.0 ] time) (toNel $ wah "foolsHighWah" "smooth3" 6.0 32 (78.0 : 82.0 : 85.0 : 89.0 : 92.0 : Nil) Nothing 1.0 1.0 (-0.5) (0.5) time)))
+
+thisLow :: SigAU
+thisLow =
+  boundByCueWithOnset This11 To11
+    (\ac onset m t -> let time = t - onset in pure (gainT_ "thisLowGain" (epwf [ Tuple 0.0 0.0, Tuple 1.1 0.2, Tuple 5.0 0.0 ] time) (toNel $ wah "thisLowWah" "smooth" 5.0 17 (21.0 : 33.0 : Nil) Nothing 1.0 1.0 (0.2) (-0.2) time)))
 
 thenOneDayWah0 :: SigAU
 thenOneDayWah0 =
@@ -3422,6 +3434,7 @@ makeHarmonicBase :: String -> Array (Tuple Number Number) -> Array HarmWithPlace
 makeHarmonicBase tag cuts a' = \time -> pure (gainT_ (tag <> "harmBaseGain") (if A.null cutpwf then defaultParam { param = 1.0 } else (epwf cutpwf time)) $ toNel (fold (map (\f -> f time) (mapWithIndex (\i (Tuple shh (Tuple st o)) -> atT (max 0.0 (st - 0.2)) $ boundPlayer (o + bleedover) (\t -> pure $ gainT_' (tag <> show i <> "harmonicBaseGain") (epwf [ Tuple 0.0 0.0, Tuple 0.2 1.0, Tuple o 1.0, Tuple (o + bleedover) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicBaseBuffer") (h2s shh) 1.0 0.6))) a))))
   where
   bleedover = 0.7
+
   cutpwf = A.sortBy (\(Tuple x _) (Tuple y _) -> compare x y) (join $ map (\(Tuple o w) -> [ Tuple o 1.0, Tuple (o + 0.05) 0.0, Tuple (o + w + 0.05) 0.0, Tuple (o + w + 0.1) 1.0 ]) cuts)
 
   a = foldOverTime (\clen (Tuple shh o) -> Tuple shh (Tuple clen o)) (\(Tuple _ o) -> o) a'
@@ -3595,6 +3608,9 @@ natureBoy =
   , improFiligree
   , shredderManyThings
   , cymMa
+  , foolRichSwell
+  , foolHigh
+  , thisLow
   , maVoice
   , ny9Voice
   , thingsVoice
