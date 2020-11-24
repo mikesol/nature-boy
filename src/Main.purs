@@ -167,7 +167,7 @@ kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
 mic = microphone_ :: String -> AudioUnit D1
 
 pmic :: String -> AudioUnit D2
-pmic s = pannerMono_ ("voicePanner" <> s) 0.0 (mic s)
+pmic _ = dup2_ "voiceDup" (pannerMono_ ("voicePanner") 0.0 (mic "voiceMic")) \s -> gain_ "pmic-adder" 1.0 (gain_' "pmic-wet" 0.35 (convolver_ "pmic-verb" "matrix-verb-3" s) :| gain_' "pmic-dry" 0.65 s : Nil)
 
 t1c440 :: Number -> Number -> Tuple Number Number
 t1c440 gn = Tuple gn <<< conv440
@@ -595,9 +595,9 @@ richSwell tag st ed p0p p0f p1p p1f =
 
 shyRichSwell = (let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf) :: SigAU
 
-sadRichSwell = (let tf = (\time -> (skewedTriangle01 0.5 2.0 time) * 0.15) in richSwell "sad" And5 Of5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
+sadRichSwell = (let tf = (\time -> (skewedTriangle01 0.5 2.2 time) * 0.15) in richSwell "sad" And5 Of5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
 
-eyeRichSwell = (let tf = (\time ->  (skewedTriangle01 0.3 6.0 time) * 0.27) in richSwell "eye" Eye5 Ve6 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
+eyeRichSwell = (let tf = (\time -> (skewedTriangle01 0.3 6.0 time) * 0.27) in richSwell "eye" Eye5 Ve6 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
 
 heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
 
@@ -969,14 +969,6 @@ boyDupedOnset t d =
         )
     )
 
-boy1 :: SigAU
-boy1 =
-  boundByCueWithOnset Boy1 Boy1 \ac onset m t ->
-    pure
-      $ dup2
-          (pmic "Boy1Mic") \d ->
-          (gain_ "Boy1Comb" 1.0 (d :| (boyDupedOnset (t - onset) d)))
-
 they2 :: SigAU
 they2 =
   boundByCueWithOnset They2 Dered2
@@ -1004,11 +996,6 @@ sayHeWandered :: SigAU
 sayHeWandered =
   boundByCue Say2 Dered2
     (\m t -> pure (pmic "SayHeWanderedMic"))
-
-a1 :: SigAU
-a1 =
-  boundByCue A1 A1
-    (\m t -> pure (pmic "A1Mic"))
 
 singleLowGSharpCello :: String -> Number -> AudioUnit D2
 singleLowGSharpCello s time =
@@ -1231,29 +1218,9 @@ celloVeryStrangeEnchantedDrone =
             )
     )
 
-veRyStrangeEn :: SigAU
-veRyStrangeEn =
-  boundByCueWithOnset Ve1 Boy1
-    ( \ac onset m t ->
-        graph_ "VeRyStrangeEnGraph"
-          { aggregators:
-              { out: Tuple (g'add_ "VeRyStrangeEnOut") (SLProxy :: SLProxy ("combine" :/ SNil))
-              , combine: Tuple (g'add_ "VeRyStrangeEnCombine") (SLProxy :: SLProxy ("gain" :/ "mic" :/ SNil))
-              , gain: Tuple (g'gain_ "VeRyStrangeEnGain" $ min 0.7 (0.18 * (t - onset))) (SLProxy :: SLProxy ("del" :/ SNil))
-              }
-          , processors:
-              { del: Tuple (g'delay_ "VeRyStrangeEnDelay" 0.35) (SProxy :: SProxy "combine")
-              }
-          , generators:
-              { mic: boundByCueNac''' Ve1 En1 (pmic "VeRyStrangeEnMic") m
-              }
-          }
-          : Nil
-    )
-
-chanTed :: SigAU
-chanTed =
-  boundByCue Chan1 Boy1
+aVeRyStrangeEnChanTedBoy :: SigAU
+aVeRyStrangeEnChanTedBoy =
+  boundByCue A1 Boy1
     ( \m t ->
         pure
           $ graph_ "Chan1Graph"
@@ -1266,7 +1233,7 @@ chanTed =
                   { del: Tuple (g'delay_ "Chan1Delay" 0.31) (SProxy :: SProxy "combine")
                   }
               , generators:
-                  { mic: boundByCueNac''' Chan1 Ted1 (pmic "Chan1Mic") m
+                  { mic: (pmic "Chan1Mic")
                   }
               }
     )
@@ -1972,7 +1939,7 @@ compVeryStrangeEnchantedBoy Chan1 = t1c440 1.0 <$> 61.0 : 63.0 : 66.0 : 70.0 : N
 
 compVeryStrangeEnchantedBoy Ted1 = t1c440 0.8 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
 
--- compVeryStrangeEnchantedBoy Boy1 = t1c440 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
+compVeryStrangeEnchantedBoy Boy1 = t1c440 0.8 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
 compVeryStrangeEnchantedBoy _ = Nil
 
 poscVeryStrangeEnchantedBoy :: Marker -> String
@@ -3535,13 +3502,10 @@ natureBoy =
   , was0
   , a0
   , boy0
-  , a1
   , celloVeryStrangeEnchantedDrone
   , veRyStrangeEnChanTedBoyHHs
   , veryStrangeEnchantedBoyComp
-  , veRyStrangeEn
-  , chanTed
-  , boy1
+  , aVeRyStrangeEnChanTedBoy
   , they2
   , sayHeWandered
   , sayPad
