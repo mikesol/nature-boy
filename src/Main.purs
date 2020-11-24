@@ -595,6 +595,8 @@ richSwell tag st ed p0p p0f p1p p1f =
 
 shyRichSwell = (let tf = (\time -> min 0.3 (if time < 0.5 then 0.0 else (time - 0.5) * 0.08)) in richSwell "shy" Shy5 Shy5 (conv440 20.0) tf (conv440 32.0) tf) :: SigAU
 
+sadRichSwell = (let tf = (\time -> min 0.3 (skewedTriangle01 0.5 0.9 time)) * 0.5) in richSwell "sad" And5 Sad5 (conv440 13.0) tf (conv440 25.0) tf) :: SigAU
+
 eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else skewedTriangle01 0.3 6.0 (time - 0.7)) * 0.27) in richSwell "eye" Eye5 Ve6 (conv440 25.0) tf (conv440 37.0) tf) :: SigAU
 
 heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
@@ -3417,8 +3419,9 @@ makeHarmonicInterjection :: String -> HarmWithPlacementAndWidth -> Number -> Lis
 makeHarmonicInterjection tag (Tuple shh (Tuple loc width)) = atT loc $ boundPlayer (width + 0.1) (\t -> pure $ gainT_' (tag <> "harmonicInterjectionGain") (epwf [ Tuple 0.0 0.0, Tuple 0.05 1.0, Tuple (width + 0.05) 1.0, Tuple (width + 0.1) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicInterjectionBuffer") (h2s shh) 1.0 (1.5 + (t % 1.0)))) -- t % 1.0 adds variance to start point
 
 makeHarmonicBase :: String -> Array (Tuple Number Number) -> Array HarmWithPlacement -> Number -> List (AudioUnit D2)
-makeHarmonicBase tag cuts a' = \time -> pure (gainT_ (tag <> "harmBaseGain") (if A.null cutpwf then defaultParam { param = 1.0 } else (epwf cutpwf time)) $ toNel (fold (map (\f -> f time) (mapWithIndex (\i (Tuple shh (Tuple st o)) -> atT st $ boundPlayer (o + 0.5) (\t -> pure $ gainT_' (tag <> show i <> "harmonicBaseGain") (epwf [ Tuple 0.0 0.0, Tuple 0.2 1.0, Tuple o 1.0, Tuple (o + 0.5) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicBaseBuffer") (h2s shh) 1.0 0.6))) a))))
+makeHarmonicBase tag cuts a' = \time -> pure (gainT_ (tag <> "harmBaseGain") (if A.null cutpwf then defaultParam { param = 1.0 } else (epwf cutpwf time)) $ toNel (fold (map (\f -> f time) (mapWithIndex (\i (Tuple shh (Tuple st o)) -> atT (max 0.0 (st - 0.2)) $ boundPlayer (o + bleedover) (\t -> pure $ gainT_' (tag <> show i <> "harmonicBaseGain") (epwf [ Tuple 0.0 0.0, Tuple 0.2 1.0, Tuple o 1.0, Tuple (o + bleedover) 0.0 ] t) (playBufWithOffset_ (tag <> "harmonicBaseBuffer") (h2s shh) 1.0 0.6))) a))))
   where
+  bleedover = 0.7
   cutpwf = A.sortBy (\(Tuple x _) (Tuple y _) -> compare x y) (join $ map (\(Tuple o w) -> [ Tuple o 1.0, Tuple (o + 0.05) 0.0, Tuple (o + w + 0.05) 0.0, Tuple (o + w + 0.1) 1.0 ]) cuts)
 
   a = foldOverTime (\clen (Tuple shh o) -> Tuple shh (Tuple clen o)) (\(Tuple _ o) -> o) a'
@@ -3430,7 +3433,7 @@ mkSecondHalfHarm st ed base intj = boundByCueWithOnset st ed \ac onset m t -> le
 
   l = [ makeHarmonicBase (m2s st <> m2s ed) cuts base ] <> map (makeHarmonicInterjection (m2s st <> m2s ed)) intj
 
-andThenOneH = mkSecondHalfHarm Then7 One7 [ Tuple AndThenOneDayBase0 2.0, Tuple AndThenOneDayBase1 1.0 ] [ Tuple AndThenOneDayIntj0 (Tuple 1.95 0.15) ] :: SigAU
+andThenOneH = mkSecondHalfHarm Then7 One7 [ Tuple AndThenOneDayBase0 2.0, Tuple AndThenOneDayBase1 1.0, Tuple AndThenOneDayBase0 10.0 ] [ Tuple AndThenOneDayIntj0 (Tuple 1.95 0.15) ] :: SigAU
 
 dayH = mkSecondHalfHarm Day7 Day7 [ Tuple AndThenOneDayBase0 2.0, Tuple AndThenOneDayBase1 1.0, Tuple AndThenOneDayBase0 0.5, Tuple AndThenOneDayBase1 2.0, Tuple AndThenOneDayBase0 0.3, Tuple AndThenOneDayBase1 0.3, Tuple AndThenOneDayBase0 10.0 ] [ Tuple AndThenOneDayIntj1 (Tuple 2.5 0.3), Tuple AndThenOneDayIntj2 (Tuple 3.2 0.2), Tuple AndThenOneDayIntj3 (Tuple 3.5 0.15), Tuple AndThenOneDayIntj4 (Tuple 3.81 0.12), Tuple AndThenOneDayIntj0 (Tuple 4.1 0.23) ] :: SigAU
 
@@ -3571,6 +3574,7 @@ natureBoy =
   , wasHeGlitches
   , planeLanding
   , shyRichSwell
+  , sadRichSwell
   , eyeRichSwell
   , heRichSwell
   , shyGlock
