@@ -601,7 +601,7 @@ eyeRichSwell = (let tf = (\time -> min 0.3 (if time < 0.7 then 0.0 else skewedTr
 
 heRichSwell = richSwell "he" Wise6 He6 (conv440 32.0) (\time -> min 0.3 $ time * 0.02) (conv440 44.0) (\time -> min 0.2 $ time * 0.02) :: SigAU
 
-foolRichSwell = (let tf = (\time -> (skewedTriangle01 0.42 6.3 time) * 0.3) in richSwell "sad" Fools10 Kings10 (conv440 30.0) tf (conv440 42.0) tf) :: SigAU
+foolRichSwell = (let tf = (\time -> (skewedTriangle01 0.42 6.3 time) * 0.15) in richSwell "sad" Fools10 Kings10 (conv440 30.0) tf (conv440 42.0) tf) :: SigAU
 
 foolHigh :: SigAU
 foolHigh =
@@ -3028,9 +3028,9 @@ thenOneDayOneMagicDayHePassedMyWayDrums =
         let
           time = t - onset
 
-          left = 30.0 + 30.0 * sin ((if m >= While9 then 10.0 else 0.2) * time * pi)
+          left = 30.0 + 30.0 * sin (0.2 * time * pi)
 
-          right = min 78.0 ((if m >= While9 then 0.5 else 4.4) + (if m >= While9 then 0.3 else 4.0) * sin (if m >= While9 then 12.0 else 0.35 * time * pi) + left)
+          right = min 78.0 (4.4 + 4.0 * sin (if m >= While9 then 12.0 else 0.35 * time * pi) + left)
         in
           pure (gain_' "glitchDrumGain" (min 1.0 (time * 0.15)) (loopBuf_ "glitchDrumBuf" "drumz-cat-55" 1.0 left right))
     )
@@ -3066,7 +3066,7 @@ makeDrumMachine mk atod' =
           fold (map (\f -> f time) bps)
     )
   where
-  atod = foldOverTime (\clen (TOD offset len dm) -> Tuple (len + clen) (TOD offset len dm)) (\(TOD _ len _) -> len) atod'
+  atod = foldOverTime (\clen (TOD offset len dm) -> Tuple (clen) (TOD offset len dm)) (\(TOD _ len _) -> len) atod'
 
   bps = mapWithIndex (\i (Tuple loc (TOD offset len dm')) -> (maybe (const Nil) \(Tuple dm hpf) -> let preface = m2s mk <> mt2s dm <> show i in atT loc $ boundPlayer (len + 0.06) (\tnow -> pure $ gainT_' (preface <> "mdm-gain") (epwf [ Tuple 0.0 1.0, Tuple len 1.0, Tuple (len + 0.03) 0.0 ] tnow) (hpf $ playBufWithOffset_ (preface <> "mdm-buf") (mt2s dm) 1.0 offset))) dm') atod
 
@@ -3123,18 +3123,18 @@ thingsDrumz =
 
 foolsDrumz =
   makeDrumMachine Fools10
-    [ TOD 20.0 0.9 (Nothing)
-    , TOD 0.0 0.15 (Just $ Tuple Cat160 identity)
-    , TOD 1.0 4.0 (Nothing)
+    [ TOD 20.0 0.9 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.15 (Nothing)
+    , TOD 1.0 4.0 (Just $ Tuple Cat160 identity)
     ] ::
     SigAU
 
 andDrumz =
   makeDrumMachine And10
-    [ TOD 0.0 0.2 (Just $ Tuple Cat55 identity)
-    , TOD 0.0 0.2 (Just $ Tuple Cat80 identity)
-    , TOD 0.0 0.2 (Just $ Tuple Cat100 identity)
-    , TOD 0.0 0.2 (Just $ Tuple Cat110 identity)
+    [ TOD 0.0 0.9 (Just $ Tuple Cat55 identity)
+    , TOD 0.0 0.9 (Just $ Tuple Cat80 identity)
+    , TOD 0.0 0.9 (Just $ Tuple Cat100 identity)
+    , TOD 0.0 0.9 (Just $ Tuple Cat110 identity)
     , TOD 0.0 3.0 (Just $ Tuple Cat160 identity)
     ] ::
     SigAU
@@ -3152,25 +3152,25 @@ kingsDrumz =
 
 thisDrumz =
   makeDrumMachine This11
-    [ TOD 0.0 10.0 (Just $ Tuple Cat55 (highpass_ "thisDrumzHpf" 700.0 8.0))
+    [ TOD 4.0 10.0 (Just $ Tuple Cat160 (highpass_ "thisDrumzHpf" 700.0 8.0))
     ] ::
     SigAU
 
 heDrumz =
   makeDrumMachine He11
-    [ TOD 20.0 10.0 (Just $ Tuple Cat55 (highpass_ "heDrumzHpf" 1400.0 8.0))
+    [ TOD 4.0 10.0 (Just $ Tuple Cat110 (highpass_ "heDrumzHpf" 1400.0 8.0))
     ] ::
     SigAU
 
 saidDrumz =
   makeDrumMachine Said11
-    [ TOD 15.0 10.0 (Just $ Tuple Cat55 (highpass_ "saidDrumzHpf" 2100.0 8.0))
+    [ TOD 4.0 10.0 (Just $ Tuple Cat100 (highpass_ "saidDrumzHpf" 2100.0 8.0))
     ] ::
     SigAU
 
 toDrumz =
   makeDrumMachine To11
-    [ TOD 12.0 10.0 (Just $ Tuple Cat110 (highpass_ "toDrumzHpf" 3000.0 8.0))
+    [ TOD 4.0 10.0 (Just $ Tuple Cat80 (highpass_ "toDrumzHpf" 3000.0 8.0))
     ] ::
     SigAU
 
