@@ -166,8 +166,11 @@ kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
 
 mic = microphone_ :: String -> AudioUnit D1
 
+pmic' :: Number -> Number -> String -> AudioUnit D2
+pmic' dry wet _ = dup2_ "voiceDup" (pannerMono_ ("voicePanner") 0.0 (mic "voiceMic")) \s -> gain_ "pmic-adder" 1.0 (gain_' "pmic-wet" wet (convolver_ "pmic-verb" "matrix-verb-3" s) :| gain_' "pmic-dry" dry s : Nil)
+
 pmic :: String -> AudioUnit D2
-pmic _ = dup2_ "voiceDup" (pannerMono_ ("voicePanner") 0.0 (mic "voiceMic")) \s -> gain_ "pmic-adder" 1.0 (gain_' "pmic-wet" 0.35 (convolver_ "pmic-verb" "matrix-verb-3" s) :| gain_' "pmic-dry" 0.65 s : Nil)
+pmic = pmic' 0.65 0.35
 
 t1c440 :: Number -> Number -> Tuple Number Number
 t1c440 gn = Tuple gn <<< conv440
@@ -897,9 +900,7 @@ veryWiseWasHeHigh =
     )
 
 a0 :: SigAU
-a0 =
-  boundByCue A0 A0
-    (\m t -> pure (pmic "A0Mic"))
+a0 = boundByCue A0 A0 \m t -> pure (gain_' "A0Gain" (skewedTriangle01 0.5 0.3 t) (pmic "A0Mic"))
 
 boy0 :: SigAU
 boy0 =
@@ -1086,11 +1087,11 @@ deredPad = tshwvfPad "dered-pad" Dered2 Ry3 :: SigAU
 
 veRyPad = tshwvfPad "very-pad" Ve3 Far3 :: SigAU
 
--- at offset length freq q
-data AOLFQR
-  = AOLFQR Number Number Number Number Number Boolean
+-- at offset length gain freq q
+data AOLGFQR
+  = AOLGFQR Number Number Number Number Number Number Boolean
 
-theySayHeWanderedCymbalFragment :: Marker -> Marker -> Array AOLFQR -> SigAU
+theySayHeWanderedCymbalFragment :: Marker -> Marker -> Array AOLGFQR -> SigAU
 theySayHeWanderedCymbalFragment st ed olfq =
   boundByCueWithOnset st ed
     ( \ac onset m t ->
@@ -1099,12 +1100,12 @@ theySayHeWanderedCymbalFragment st ed olfq =
         in
           fold
             ( map
-                ( \(AOLFQR a o l f q r) ->
+                ( \(AOLGFQR a o l g f q r) ->
                     ( atT a
                         $ boundPlayer (l + 0.06)
                             ( \tm ->
                                 pure
-                                  ( gainT_' (show a <> m2s st <> "theySayGain") (epwf [ Tuple 0.0 0.0, Tuple 1.0 l ] tm)
+                                  ( gainT_' (show a <> m2s st <> "theySayGain") (epwf [ Tuple 0.0 0.0, Tuple l g ] tm)
                                       (highpass_ (show a <> m2s st <> "theySayHP") f q $ playBufWithOffset_ (show a <> m2s st <> "theySayBuf") (if r then "focym" else "revcym") 1.0 (if r then (6.8 - o - l) else o))
                                   )
                             )
@@ -1117,57 +1118,57 @@ theySayHeWanderedCymbalFragment st ed olfq =
 
 theySayHeWanderedBuildup =
   [ theySayHeWanderedCymbalFragment They2 Say2
-      [ AOLFQR 0.0 0.8 0.8 1000.0 3.0 false
-      , AOLFQR 0.6 1.4 1.2 500.0 2.0 false
-      , AOLFQR 0.9 1.5 1.6 1500.0 6.0 false
-      , AOLFQR 1.3 1.0 0.8 700.0 4.0 false
+      [ AOLGFQR 0.0 0.8 0.8 1.0 1000.0 3.0 false
+      , AOLGFQR 0.6 1.4 1.2 1.0 500.0 2.0 false
+      , AOLGFQR 0.9 1.5 1.6 1.0 1500.0 6.0 false
+      , AOLGFQR 1.3 1.0 0.8 1.0 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Say2 He2
-      [ AOLFQR 0.0 1.2 0.8 1000.0 3.0 false
-      , AOLFQR 0.5 1.4 1.2 500.0 2.0 false
-      , AOLFQR 0.9 2.0 0.9 1500.0 6.0 false
-      , AOLFQR 1.4 1.7 1.0 700.0 4.0 false
+      [ AOLGFQR 0.0 1.2 0.8 1.0 1000.0 3.0 false
+      , AOLGFQR 0.5 1.4 1.2 1.0 500.0 2.0 false
+      , AOLGFQR 0.9 2.0 0.9 1.0 1500.0 6.0 false
+      , AOLGFQR 1.4 1.7 1.0 1.0 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment He2 Wan2
-      [ AOLFQR 0.0 1.6 1.2 1000.0 3.0 false
-      , AOLFQR 0.4 2.3 1.1 500.0 2.0 false
-      , AOLFQR 0.8 2.6 1.3 1500.0 6.0 false
-      , AOLFQR 1.2 2.5 0.9 700.0 4.0 false
+      [ AOLGFQR 0.0 1.6 1.2 1.0 1000.0 3.0 false
+      , AOLGFQR 0.4 2.3 1.1 1.0 500.0 2.0 false
+      , AOLGFQR 0.8 2.6 1.3 0.9 1500.0 6.0 false
+      , AOLGFQR 1.2 2.5 0.9 0.8 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Wan2 Dered2
-      [ AOLFQR 0.0 2.3 1.3 1000.0 3.0 false
-      , AOLFQR 0.35 3.3 0.9 500.0 2.0 false
-      , AOLFQR 0.7 4.2 1.6 1500.0 6.0 false
-      , AOLFQR 1.05 3.1 1.3 2800.0 8.0 false
-      , AOLFQR 1.2 4.5 1.4 700.0 4.0 false
+      [ AOLGFQR 0.0 2.3 1.3 1.0 1000.0 3.0 false
+      , AOLGFQR 0.35 3.3 0.9 0.8 500.0 2.0 false
+      , AOLGFQR 0.7 4.2 1.6 0.6 1500.0 6.0 false
+      , AOLGFQR 1.05 3.1 1.3 0.5 2800.0 8.0 false
+      , AOLGFQR 1.2 4.5 1.4 0.4 700.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Dered2 Ry2
-      [ AOLFQR 0.0 4.8 1.8 1600.0 7.0 false
-      , AOLFQR 0.3 5.1 1.5 500.0 2.0 false
-      , AOLFQR 0.6 5.9 1.15 3000.0 6.0 false
-      , AOLFQR 0.9 5.5 1.5 300.0 2.0 false
-      , AOLFQR 1.2 5.8 0.9 2000.0 4.0 false
+      [ AOLGFQR 0.0 4.8 1.8 1.0 1600.0 7.0 false
+      , AOLGFQR 0.3 5.1 1.5 0.7 500.0 2.0 false
+      , AOLGFQR 0.6 5.9 1.15 0.4 3000.0 6.0 false
+      , AOLGFQR 0.9 5.5 1.5 0.3 300.0 2.0 false
+      , AOLGFQR 1.2 5.8 0.9 0.2 2000.0 4.0 false
       ]
   , theySayHeWanderedCymbalFragment Ve2 Far2
-      [ AOLFQR 0.0 5.1 1.3 1600.0 7.0 true
-      , AOLFQR 0.3 5.0 1.5 500.0 2.0 true
-      , AOLFQR 0.6 4.6 0.9 3000.0 6.0 true
-      , AOLFQR 0.9 4.8 1.2 300.0 2.0 true
-      , AOLFQR 1.2 4.3 0.4 1500.0 4.0 true
+      [ AOLGFQR 0.0 5.1 1.3 1.0 1600.0 7.0 true
+      , AOLGFQR 0.3 5.0 1.5 0.8 500.0 2.0 true
+      , AOLGFQR 0.6 4.6 0.9 0.8 3000.0 6.0 true
+      , AOLGFQR 0.9 4.8 1.2 0.6 300.0 2.0 true
+      , AOLGFQR 1.2 4.3 0.4 0.6 1500.0 4.0 true
       ]
   , theySayHeWanderedCymbalFragment Ry2 Far2
-      [ AOLFQR 0.0 3.8 0.8 1000.0 3.0 true
-      , AOLFQR 0.6 3.5 0.5 500.0 2.0 true
-      , AOLFQR 0.9 3.3 0.3 1500.0 6.0 true
-      , AOLFQR 1.2 3.1 1.2 700.0 4.0 true
+      [ AOLGFQR 0.0 3.8 0.8 1.0 1000.0 3.0 true
+      , AOLGFQR 0.6 3.5 0.5 0.8 500.0 2.0 true
+      , AOLGFQR 0.9 3.3 0.3 0.6 1500.0 6.0 true
+      , AOLGFQR 1.2 3.1 1.2 0.6 700.0 4.0 true
       ]
   , theySayHeWanderedCymbalFragment Far2 Far2
-      [ AOLFQR 0.0 2.3 0.4 1000.0 3.0 true
-      , AOLFQR 0.6 2.1 0.5 500.0 2.0 true
-      , AOLFQR 0.9 1.8 0.4 1500.0 6.0 true
-      , AOLFQR 1.2 1.6 0.5 700.0 4.0 true
-      , AOLFQR 1.6 1.6 0.5 700.0 4.0 true
-      , AOLFQR 2.0 1.1 0.5 700.0 4.0 true
+      [ AOLGFQR 0.0 2.3 0.4 1.0 1000.0 3.0 true
+      , AOLGFQR 0.6 2.1 0.5 1.0 500.0 2.0 true
+      , AOLGFQR 0.9 1.8 0.4 1.0 1500.0 6.0 true
+      , AOLGFQR 1.2 1.6 0.5 1.0 700.0 4.0 true
+      , AOLGFQR 1.6 1.6 0.5 1.0 700.0 4.0 true
+      , AOLGFQR 2.0 1.1 0.5 1.0 700.0 4.0 true
       ]
   ] ::
     Array SigAU
@@ -1940,6 +1941,7 @@ compVeryStrangeEnchantedBoy Chan1 = t1c440 1.0 <$> 61.0 : 63.0 : 66.0 : 70.0 : N
 compVeryStrangeEnchantedBoy Ted1 = t1c440 0.8 <$> 60.0 : 62.0 : 66.0 : 69.0 : Nil
 
 compVeryStrangeEnchantedBoy Boy1 = t1c440 0.8 <$> 59.0 : 63.0 : 65.0 : 68.0 : Nil
+
 compVeryStrangeEnchantedBoy _ = Nil
 
 poscVeryStrangeEnchantedBoy :: Marker -> String
