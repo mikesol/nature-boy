@@ -1906,6 +1906,25 @@ improGlitch =
           pure (gainT_' "improGlitchGain" (epwf [ Tuple 0.0 0.0, Tuple 0.4 0.3, Tuple 5.0 1.0, Tuple 5.04 0.07, Tuple 10.0 0.07, Tuple 13.0 1.0, Tuple 15.0 1.0, Tuple 15.4 0.07, Tuple 20.0 0.07, Tuple 26.0 1.0, Tuple 31.02 0.07, Tuple 33.0 0.07, Tuple 33.05 1.0, Tuple 33.38 1.0, Tuple 33.44 0.13, Tuple 36.0 0.07, Tuple 40.0 0.13, Tuple 48.1 0.13, Tuple 50.0 0.7, Tuple 54.3 0.7, Tuple 55.0 0.1, Tuple 57.0 0.0, Tuple 63.0 0.0, Tuple 66.0 0.1, Tuple 71.0 0.1, Tuple 71.2 0.0, Tuple 74.0 0.0, Tuple 74.2 0.6, Tuple 74.8 0.2, Tuple 90.0 0.0 ] time) (playBuf_ "improGlitchBuf" "impro-glitch" 1.0))
     )
 
+gettinHot :: SigAU
+gettinHot =
+  boundByCueWithOnset While9 Me11
+    ( \ac onset m t ->
+        let
+          time = t - onset
+
+          pt = time `pow` 1.5
+        in
+          pure
+            ( gain_ "gettinHotGain" (if time > 20.0 then 0.0 else 0.4 * skewedTriangle01 0.3 20.0 time)
+                ( gain_' "gettin-hot-drumz-1-gain" (skewedTriangle01 0.5 3.0 ((pt) + 1.0)) (loopBuf_ "gettin-hot-drumz-1-gain" "subdermal" 1.0 0.0 0.0)
+                    :| gain_' "gettin-hot-drumz-2-gain" (skewedTriangle01 0.5 3.0 ((pt) + 2.0)) (loopBuf_ "gettin-hot-drumz-2-buf" "shredstep" 1.0 0.0 0.0)
+                    : gain_' "gettin-hot-drumz-3-gain" (skewedTriangle01 0.5 3.0 (pt)) (loopBuf_ "gettin-hot-drumz-3-buf" "kerosene" 1.0 0.0 0.0)
+                    : Nil
+                )
+            )
+    )
+
 improWobble :: SigAU
 improWobble =
   boundByCueWithOnset Passed8 Turn13
@@ -3568,6 +3587,7 @@ natureBoy =
   , snarePassed
   , bassGlitch1
   , bassGlitch2
+  , gettinHot
   , bassManyThings
   , improGlitch
   , improWobble
@@ -3713,6 +3733,9 @@ main =
         -- cym
         , Tuple "revcym" "https://freesound.org/data/previews/240/240712_3552082-hq.mp3"
         , Tuple "focym" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/forwardCymbal.mp3"
+        , Tuple "subdermal" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumzSubDermal160.ogg"
+        , Tuple "shredstep" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumzShredstep160.ogg"
+        , Tuple "kerosene" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/drumzKerosene160.ogg"
         -- drumz
         , Tuple "kick" "https://freesound.org/data/previews/189/189174_3296371-hq.mp3"
         , Tuple "slow-drum-pattern" "https://klank-share.s3-eu-west-1.amazonaws.com/nature-boy/stonerRock.mp3"
